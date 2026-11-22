@@ -1,5 +1,5 @@
 const BASE="app85fHkF9Jr8eXvF",T={classes:"Classes",subjects:"Subjects",students:"Students",grades:"Grades",users:"Users",logs:"ActivityLogs"},COOKIE="nomreyar_session";
-const json=(d,s=200,h={})=>new Response(JSON.stringify(d),{status:s,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store",...h}});
+const json=(d,s=200,h={})=>{const status=Number.isInteger(s)&&s>=200&&s<=599?s:500;return new Response(JSON.stringify(d),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store",...h}})};
 const bad=(m,s=400)=>json({error:m},s),enc=s=>new TextEncoder().encode(s);
 const b64=b=>btoa(String.fromCharCode(...new Uint8Array(b))).replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_");
 const unb64=s=>Uint8Array.from(atob(s.replace(/-/g,"+").replace(/_/g,"/")+"=".repeat((4-s.length%4)%4)),c=>c.charCodeAt(0));
