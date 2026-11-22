@@ -4,6 +4,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap');
 :root{font-family:Vazirmatn,Tahoma,sans-serif;color:#172033;background:#f3f6fc}*{box-sizing:border-box}body{margin:0}button,input,select{font:inherit}button{cursor:pointer;border:0}.top{background:#101a32;color:white;padding:20px max(20px,calc((100% - 1160px)/2));display:flex;justify-content:space-between;align-items:center}.brand{display:flex;gap:12px;align-items:center}.logo{background:#6b8cff;border-radius:14px;padding:10px 15px;font-size:22px}.brand h1{font-size:19px;margin:0}.brand p{font-size:12px;color:#aebbd4;margin:3px 0}.wrap{max-width:1160px;margin:26px auto;padding:0 18px}.login{max-width:420px;margin:65px auto;background:white;padding:28px;border-radius:20px;box-shadow:0 12px 40px #172b4d12}.field{display:grid;gap:7px;margin:14px 0}.field label,.muted{font-size:13px;color:#718096}.field input,.field select{width:100%;padding:12px;border:1px solid #dbe3f0;border-radius:10px;background:white}.password-wrap{position:relative;direction:ltr}.password-wrap input{padding-left:48px}.password-toggle{position:absolute;left:7px;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:8px;background:#edf1f7;color:#334155;display:grid;place-items:center;font-size:17px}.password-toggle:focus-visible{outline:2px solid #496ff0;outline-offset:2px}.btn{padding:11px 17px;border-radius:10px;background:#496ff0;color:white;font-weight:700}.btn.ghost{background:#edf1f7;color:#334155}.full{width:100%}.error{color:#bd3434;font-size:13px;min-height:20px}.hidden{display:none!important}.notice{padding:12px;background:#fff8e7;color:#7d5a12;border:1px solid #f5e3b2;border-radius:12px;font-size:13px;margin-bottom:16px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:18px}.stat,.panel,.side{background:white;border:1px solid #e8edf5;border-radius:16px;padding:17px}.stat small{color:#718096}.stat strong{display:block;font-size:24px;margin-top:6px}.layout{display:grid;grid-template-columns:210px 1fr;gap:17px}.nav{display:grid;gap:5px}.nav button{text-align:right;padding:12px;border-radius:9px;background:transparent;color:#526078}.nav button.active{background:#edf2ff;color:#3157c9;font-weight:700}.headrow{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:10px}.headrow h2{font-size:20px;margin:0}.toolbar,.filters{display:flex;gap:8px;flex-wrap:wrap}.filters{margin-bottom:12px}.filters select{padding:10px;border:1px solid #dbe3f0;border-radius:10px;background:white}.tablewrap{overflow:auto;background:white;border:1px solid #e8edf5;border-radius:14px}table{width:100%;border-collapse:collapse;min-width:580px}th,td{text-align:right;padding:12px;border-bottom:1px solid #edf1f6;font-size:13px}th{background:#f8faff;color:#526078}.empty{text-align:center;padding:28px;color:#8491a5}.pill{display:inline-block;padding:5px 10px;border-radius:20px;background:#edf2ff;color:#3157c9;font-size:12px}.modalback{position:fixed;inset:0;background:#0b173b80;display:grid;place-items:center;padding:15px;z-index:5}.modal{background:white;border-radius:17px;padding:22px;width:min(520px,100%);max-height:90vh;overflow:auto}.actions{display:flex;gap:8px;justify-content:flex-end;margin-top:17px}
 @media(max-width:760px){.stats{grid-template-columns:repeat(2,1fr)}.layout{grid-template-columns:1fr}.nav{display:flex;overflow:auto}.nav button{white-space:nowrap}.top{padding:16px}.headrow{align-items:flex-start;flex-direction:column}}
+
+.toast{position:fixed;bottom:20px;left:20px;z-index:20;background:#17345d;color:white;padding:12px 18px;border-radius:12px;box-shadow:0 8px 30px #10204033;opacity:0;transform:translateY(10px);pointer-events:none;transition:.2s;max-width:min(90vw,520px)}.toast.show{opacity:1;transform:translateY(0)}.toast[data-type="error"]{background:#9f2929}.btn:disabled{opacity:.6;cursor:wait}.btn.small{padding:6px 9px;font-size:12px}.btn.danger{background:#b83232;color:white}.filters input,.filters select{padding:10px;border:1px solid #dbe3f0;border-radius:10px;background:white;min-width:150px}.barrow{margin:16px 0}.barrow>div:first-child{display:flex;justify-content:space-between;gap:12px;font-size:13px;margin-bottom:6px}.bartrack{height:12px;border-radius:20px;background:#edf1f7;overflow:hidden}.barfill{height:100%;background:#496ff0;border-radius:20px}.modal .field input:focus,.modal .field select:focus,.filters input:focus,.filters select:focus{outline:2px solid #9bb1ff;border-color:#496ff0}.modal select[multiple]{min-height:110px}.modal .field input[type=number]{direction:ltr;text-align:right}@media(max-width:760px){.filters{display:grid;grid-template-columns:1fr}.filters input,.filters select{width:100%}.stats{gap:8px}.stat strong{font-size:19px}.modal{padding:17px}.tablewrap table{min-width:720px}.toast{left:10px;right:10px;bottom:10px;max-width:none}}
 </style></head><body>
 <header class="top"><div class="brand"><div class="logo">ن</div><div><h1>نمره‌یار</h1><p>مدیریت نمرات پایه هشتم · مدرسه هدف برتر</p></div></div><div id="userbar" class="hidden"><span id="username"></span> <button class="btn ghost" id="logout">خروج</button></div></header>
 <main class="wrap">
@@ -13,24 +15,238 @@
 <div class="layout"><aside class="side"><nav class="nav" id="nav"><button data-tab="overview" class="active">نمای کلی</button><button data-tab="students">دانش‌آموزان</button><button data-tab="grades">ثبت و مشاهده نمرات</button><button data-tab="exams">آزمون‌ها</button><button data-tab="analytics">میانگین‌گیر و نمودار</button><button data-tab="teachers" class="adminonly">مدیریت معلمان</button><button data-tab="classes">کلاس‌ها و درس‌ها</button></nav></aside><div><div class="headrow"><h2 id="page-title">نمای کلی</h2><div id="page-actions" class="toolbar"></div></div><div id="page"></div></div></div></section>
 </main><div id="modalroot"></div>
 <script>
-const $=s=>document.querySelector(s),state={user:null,tab:"overview",classes:["خیام","فردوسی","حافظ","مولانا"],subjects:[],students:[],grades:[],exams:[],teachers:[]};
-const api=async(path,opts={})=>{const r=await fetch("/api/"+path,{...opts,headers:{"Content-Type":"application/json",...(opts.headers||{})},credentials:"same-origin"});const d=await r.json().catch(()=>({error:"پاسخ نامعتبر"}));if(!r.ok)throw Error(d.error||"خطا");return d};
+const $=s=>document.querySelector(s);
+const state={user:null,tab:"overview",classes:[],subjects:[],students:[],grades:[],exams:[],teachers:[]};
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-function modal(title,body,save){$("#modalroot").innerHTML='<div class="modalback"><div class="modal"><h3>'+title+'</h3>'+body+'<div class="actions"><button class="btn ghost" id="cancel">انصراف</button><button class="btn" id="save">ذخیره</button></div></div></div>';$("#cancel").onclick=()=>$("#modalroot").innerHTML="";$("#save").onclick=async()=>{try{const result=await save();$("#modalroot").innerHTML="";await load();render();if(result?.message)alert(result.message)}catch(e){alert(e.message)}}}
-$("#toggle-password").onclick=()=>{const p=$("#password"),b=$("#toggle-password"),show=p.type==="password";p.type=show?"text":"password";b.textContent=show?"◎":"◉";b.setAttribute("aria-label",show?"پنهان کردن رمز عبور":"نمایش رمز عبور");b.setAttribute("title",show?"پنهان کردن رمز عبور":"نمایش رمز عبور");b.setAttribute("aria-pressed",String(show))};
-$("#loginform").onsubmit=async e=>{e.preventDefault();$("#loginerror").textContent="در حال ورود...";try{state.user=(await api("login",{method:"POST",body:JSON.stringify({email:$("#email").value,password:$("#password").value})})).user;await start()}catch(e){$("#loginbox").classList.remove("hidden");$("#app").classList.add("hidden");$("#userbar").classList.add("hidden");$("#loginerror").textContent="ورود یا بارگذاری اطلاعات ناموفق بود: "+e.message}};
-$("#logout").onclick=async()=>{await api("logout",{method:"POST"}).catch(()=>{});location.reload()};
-async function start(){await load();$("#loginbox").classList.add("hidden");$("#app").classList.remove("hidden");$("#userbar").classList.remove("hidden");$("#username").textContent=state.user.name||state.user.email;$("#s-role").textContent=state.user.role==="admin"?"مدیر":"معلم";document.querySelectorAll(".adminonly").forEach(x=>x.classList.toggle("hidden",state.user.role!=="admin"));render()}
-async function load(){const [c,s,st,g,e]=await Promise.all([api("classes"),api("subjects"),api("students"),api("grades"),api("exams")]);if(c.items?.length)state.classes=c.items.map(x=>x.name);state.subjects=s.items||[];state.students=st.items||[];state.grades=g.items||[];state.exams=e.items||[];if(state.user.role==="admin"){const t=await api("teachers");state.teachers=t.items||[]}$("#s-students").textContent=state.students.length;$("#s-grades").textContent=state.grades.length;$("#s-classes").textContent=state.classes.length}
-$("#nav").onclick=e=>{const b=e.target.closest("button[data-tab]");if(!b)return;state.tab=b.dataset.tab;document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("active",x===b));render()};
-function sel(label,items){return '<div class="field"><label>'+label+'</label><select name="'+label+'" required><option value="">انتخاب کنید</option>'+items.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join("")+'</select></div>'}
-function table(head,rows){return '<div class="tablewrap"><table><thead><tr>'+head.map(x=>'<th>'+x+'</th>').join("")+'</tr></thead><tbody>'+(rows.length?rows.join(""):'<tr><td class="empty" colspan="'+head.length+'">هنوز اطلاعاتی ثبت نشده است.</td></tr>')+'</tbody></table></div>'}
-function render(){const t=state.tab,titles={overview:"نمای کلی",students:"مدیریت دانش‌آموزان",grades:"ثبت و مشاهده نمرات",exams:"آزمون‌ها",analytics:"میانگین‌گیر و نمودار",teachers:"مدیریت معلمان",classes:"کلاس‌ها و درس‌ها"};$("#page-title").textContent=titles[t];$("#page-actions").innerHTML="";
-if(t==="overview"){$("#page").innerHTML='<div class="panel"><h3>به نمره‌یار خوش آمدید</h3><p class="muted">از منوی کناری کلاس را انتخاب کنید، نام دانش‌آموزان را ثبت کنید و نمره‌ها را وارد کنید.</p>'+state.classes.map(x=>'<span class="pill">'+esc(x)+'</span> ').join("")+'<p class="muted">هیچ نام یا نمره فرضی ساخته نشده است.</p></div>';return}
-if(t==="students"){$("#page-actions").innerHTML=state.user.role==="admin"?'<button class="btn" id="addstudent">+ افزودن دانش‌آموز</button>':"";const rows=state.students.map(s=>'<tr><td>'+esc(s.name)+'</td><td>'+esc(s.className)+'</td><td>'+esc(s.code||"—")+'</td></tr>');$("#page").innerHTML=sel("فیلتر کلاس",state.classes)+table(["نام و نام خانوادگی","کلاس","کد دانش‌آموزی"],rows);$("#page select").onchange=e=>{$("#page tbody").innerHTML=state.students.filter(s=>!e.target.value||s.className===e.target.value).map(s=>'<tr><td>'+esc(s.name)+'</td><td>'+esc(s.className)+'</td><td>'+esc(s.code||"—")+'</td></tr>').join("")||'<tr><td colspan="3" class="empty">موردی یافت نشد.</td></tr>'};$("#addstudent")?.addEventListener("click",()=>modal("افزودن دانش‌آموز",'<div class="field"><label>نام <span style="color:#bd3434">*</span></label><input name="first" required maxlength="60" autocomplete="given-name"></div><div class="field"><label>نام خانوادگی <span style="color:#bd3434">*</span></label><input name="last" required maxlength="60" autocomplete="family-name"></div>'+sel("کلاس",state.classes)+'<div class="field"><label>کد دانش‌آموزی</label><input value="پس از ثبت، سایت کد ۵ رقمی یکتا می‌سازد" disabled></div><p class="muted">نام و نام خانوادگی در هر کلاس فقط یک‌بار قابل ثبت است.</p>',async()=>{const m=$("#modalroot"),v=n=>m.querySelector('[name="'+n+'"]').value;if(!v("first").trim()||!v("last").trim())throw Error("نام و نام خانوادگی اجباری است.");const result=await api("students",{method:"POST",body:JSON.stringify({firstName:v("first"),lastName:v("last"),className:v("کلاس")})});return {message:"دانش‌آموز ثبت شد. کد دانش‌آموزی: "+result.studentCode}}));return}
-if(t==="grades"){$("#page-actions").innerHTML='<button class="btn" id="addgrade">+ ثبت نمره</button>';const rows=state.grades.map(g=>'<tr><td>'+esc(g.studentName)+'</td><td>'+esc(g.className)+'</td><td>'+esc(g.subject)+'</td><td>'+esc(g.score)+'</td><td>'+esc(g.examName||"—")+'</td></tr>');$("#page").innerHTML='<div class="filters"><select id="gc"><option value="">همه کلاس‌ها</option>'+state.classes.map(x=>'<option>'+esc(x)+'</option>').join("")+'</select><select id="gs"><option value="">همه درس‌ها</option>'+state.subjects.map(x=>'<option>'+esc(x.name)+'</option>').join("")+'</select></div>'+table(["دانش‌آموز","کلاس","درس","نمره","آزمون"],rows);const filter=()=>{$("#page tbody").innerHTML=state.grades.filter(g=>(!$("#gc").value||g.className===$("#gc").value)&&(!$("#gs").value||g.subject===$("#gs").value)).map(g=>'<tr><td>'+esc(g.studentName)+'</td><td>'+esc(g.className)+'</td><td>'+esc(g.subject)+'</td><td>'+esc(g.score)+'</td><td>'+esc(g.examName||"—")+'</td></tr>').join("")||'<tr><td colspan="5" class="empty">نمره‌ای یافت نشد.</td></tr>'};$("#gc").onchange=filter;$("#gs").onchange=filter;$("#addgrade")?.addEventListener("click",()=>modal("ثبت نمره",sel("کلاس",state.classes)+sel("درس",state.subjects.map(x=>x.name))+sel("دانش‌آموز",state.students.map(x=>x.name+" · "+x.className))+'<div class="field"><label>نمره (۰ تا ۲۰)</label><input name="score" type="number" min="0" max="20" step=".25" required></div><div class="field"><label>نام آزمون</label><input name="exam" required></div><div class="field"><label>ضریب نمره</label><input name="coef" type="number" min=".1" step=".1" value="1" required></div><div class="field"><label>تاریخ آزمون</label><input name="date" type="date"></div>',async()=>{const m=$("#modalroot"),v=n=>m.querySelector('[name="'+n+'"]').value,chosen=v("دانش‌آموز"),st=state.students.find(x=>chosen===x.name+" · "+x.className&&x.className===v("کلاس"));if(!st)throw Error("دانش‌آموز معتبر انتخاب نشده است.");await api("grades",{method:"POST",body:JSON.stringify({studentCode:st.code,studentName:st.name,className:st.className,subject:v("درس"),score:Number(v("score")),examName:v("exam"),coefficient:Number(v("coef")),examDate:v("date")})})}));return}
-if(t==="classes"){$("#page").innerHTML='<div class="panel"><h3>کلاس‌های پایه هشتم</h3>'+state.classes.map(x=>'<span class="pill">'+esc(x)+'</span> ').join("")+'<h3>درس‌های تعریف‌شده</h3>'+table(["نام درس","گروه"],state.subjects.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.category||"عمومی")+'</td></tr>'))+'</div>';return}
-if(t==="exams"){$("#page-actions").innerHTML=state.user.role==="admin"?'<button class="btn" id="addexam">+ تعریف آزمون</button>':"";const rows=state.exams.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.className)+'</td><td>'+esc(x.subject)+'</td><td>'+esc(x.assessmentType)+'</td><td>'+esc(x.examDate)+'</td><td>'+esc(x.coefficient)+'</td></tr>');$("#page").innerHTML=table(["نام آزمون","کلاس","درس","نوع","تاریخ","ضریب"],rows);$("#addexam")?.addEventListener("click",()=>modal("تعریف آزمون",'<div class="field"><label>نام آزمون</label><input name="name" required></div>'+sel("کلاس",state.classes)+sel("درس",state.subjects.map(x=>x.name))+sel("نوع آزمون",["مستمر","آزمون کتبی","آزمون شفاهی","فعالیت کلاسی","پروژه","امتحان پایانی"])+'<div class="field"><label>شاخه علوم</label><select name="branch"><option value="">ندارد</option><option>زیست‌شناسی</option><option>فیزیک</option><option>شیمی</option><option>زمین‌شناسی</option></select></div><div class="field"><label>تاریخ</label><input name="date" type="date"></div><div class="field"><label>ضریب</label><input name="coef" type="number" min=".1" step=".1" value="1" required></div><div class="field"><label>توضیحات</label><input name="desc"></div>',async()=>{const m=$("#modalroot"),v=n=>m.querySelector('[name="'+n+'"]').value;await api("exams",{method:"POST",body:JSON.stringify({name:v("name"),className:v("کلاس"),subject:v("درس"),assessmentType:v("نوع آزمون"),scienceBranch:v("branch"),examDate:v("date"),coefficient:Number(v("coef")),description:v("desc")})})}));return}
-if(t==="analytics"){const valid=state.grades.filter(g=>g.score!==null&&g.score!==undefined&&Number.isFinite(Number(g.score)));const avg=list=>{const den=list.reduce((n,g)=>n+(Number(g.coefficient)||1),0);return den?list.reduce((n,g)=>n+Number(g.score)*(Number(g.coefficient)||1),0)/den:null};const classA=state.classes.map(cl=>({name:cl,avg:avg(valid.filter(g=>g.className===cl)),count:valid.filter(g=>g.className===cl).length}));$("#page").innerHTML='<div class="panel"><h3>میانگین کل نمرات</h3><div style="font-size:30px;font-weight:800;color:#3157c9">'+(avg(valid)===null?"—":avg(valid).toFixed(2)+" از ۲۰")+'</div><p class="muted">میانگین‌ها با درنظرگرفتن ضریب هر نمره محاسبه می‌شوند؛ نمره‌های باطل‌شده در محاسبه نیستند.</p></div><div class="panel" style="margin-top:14px"><h3>مقایسه میانگین چهار کلاس</h3>'+classA.map(x=>'<div style="margin:17px 0"><div style="display:flex;justify-content:space-between;gap:10px"><b>'+esc(x.name)+'</b><span>'+(x.avg===null?"بدون نمره":x.avg.toFixed(2)+" / ۲۰ · "+x.count+" نمره")+'</span></div><div style="height:14px;background:#edf1f7;border-radius:20px;overflow:hidden;margin-top:7px"><div style="height:100%;width:'+Math.max(0,Math.min(100,(x.avg||0)/20*100))+'%;background:#496ff0;border-radius:20px"></div></div></div>').join("")+'</div><div class="panel" style="margin-top:14px"><h3>میانگین به تفکیک درس</h3>'+table(["درس","تعداد نمره","میانگین"],state.subjects.map(sub=>{const list=valid.filter(g=>g.subject===sub.name),v=avg(list);return '<tr><td>'+esc(sub.name)+'</td><td>'+list.length+'</td><td>'+(v===null?"—":v.toFixed(2))+'</td></tr>'}))+'</div>';return}if(t==="teachers"){$("#page-actions").innerHTML='<button class="btn" id="addteacher">+ افزودن معلم</button>';const rows=state.teachers.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.email)+'</td><td>'+esc(x.classes.join("، "))+'</td><td>'+esc(x.subjects.join("، "))+'</td><td>'+(x.active?"فعال":"غیرفعال")+'</td></tr>');$("#page").innerHTML=table(["نام","ایمیل","کلاس‌های مجاز","درس‌های مجاز","وضعیت"],rows);$("#addteacher").onclick=()=>modal("ایجاد حساب معلم",'<div class="field"><label>نام معلم</label><input name="name" required></div><div class="field"><label>ایمیل</label><input name="email" type="email" required></div><div class="field"><label>رمز اولیه (حداقل ۸ کاراکتر)</label><input name="password" type="password" minlength="8" required></div><div class="field"><label>کلاس‌های مجاز (برای انتخاب چند کلاس Ctrl را نگه دارید)</label><select name="classes" multiple size="4" required>'+state.classes.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join("")+'</select></div><div class="field"><label>درس‌های مجاز (برای انتخاب چند درس Ctrl را نگه دارید)</label><select name="subjects" multiple size="7" required>'+state.subjects.map(x=>'<option value="'+esc(x.name)+'">'+esc(x.name)+'</option>').join("")+'</select></div>',async()=>{const m=$("#modalroot"),v=n=>m.querySelector('[name="'+n+'"]'),classes=[...v("classes").selectedOptions].map(x=>x.value),subjects=[...v("subjects").selectedOptions].map(x=>x.value);await api("teachers",{method:"POST",body:JSON.stringify({name:v("name").value,email:v("email").value,password:v("password").value,classes,subjects})})}));return}}
-(async()=>{try{state.user=(await api("me")).user;await start()}catch(e){if(state.user){$("#loginerror").textContent="بارگذاری اطلاعات ناموفق بود: "+e.message;$("#loginbox").classList.remove("hidden")}}})();
+const api=async(path,opts={})=>{
+  let response;
+  try{response=await fetch("/api/"+path,{...opts,headers:{"Content-Type":"application/json",...(opts.headers||{})},credentials:"same-origin",cache:"no-store"});}
+  catch{throw new Error("ارتباط با سرور برقرار نشد؛ اتصال اینترنت را بررسی کنید.");}
+  const type=response.headers.get("content-type")||"";
+  const data=type.includes("application/json")?await response.json().catch(()=>({error:"پاسخ JSON نامعتبر از سرور"})):{error:"سرور پاسخ غیرقابل‌خواندن فرستاد."};
+  if(!response.ok)throw new Error(data.error||("خطای سرور ("+response.status+")"));
+  return data;
+};
+function notify(message,type="success"){
+  let node=$("#toast");if(!node){node=document.createElement("div");node.id="toast";node.className="toast";document.body.appendChild(node);}
+  node.textContent=message;node.dataset.type=type;node.classList.add("show");
+  clearTimeout(notify.timer);notify.timer=setTimeout(()=>node.classList.remove("show"),3800);
+}
+function setBusy(button,busy,label="در حال انجام..."){
+  if(!button)return;
+  if(busy){button.dataset.oldText=button.textContent;button.textContent=label;button.disabled=true;}
+  else{button.textContent=button.dataset.oldText||button.textContent;button.disabled=false;}
+}
+async function load(){
+  const [c,s,st,g,e]=await Promise.all([api("classes"),api("subjects"),api("students"),api("grades"),api("exams")]);
+  state.classes=(c.items||[]).map(x=>x.name);
+  state.subjects=s.items||[];state.students=st.items||[];state.grades=g.items||[];state.exams=e.items||[];
+  if(state.user.role==="admin"){const t=await api("teachers");state.teachers=t.items||[];}
+  $("#s-students").textContent=state.students.length;
+  $("#s-grades").textContent=state.grades.length;
+  $("#s-classes").textContent=state.classes.length;
+}
+async function start(){
+  await load();
+  $("#loginbox").classList.add("hidden");$("#app").classList.remove("hidden");$("#userbar").classList.remove("hidden");
+  $("#username").textContent=state.user.name||state.user.email;
+  $("#s-role").textContent=state.user.role==="admin"?"مدیر":"معلم";
+  document.querySelectorAll(".adminonly").forEach(x=>x.classList.toggle("hidden",state.user.role!=="admin"));
+  render();
+}
+$("#toggle-password").onclick=()=>{
+  const p=$("#password"),b=$("#toggle-password"),show=p.type==="password";
+  p.type=show?"text":"password";b.textContent=show?"◎":"◉";
+  b.setAttribute("aria-label",show?"پنهان کردن رمز عبور":"نمایش رمز عبور");
+  b.setAttribute("title",show?"پنهان کردن رمز عبور":"نمایش رمز عبور");b.setAttribute("aria-pressed",String(show));
+};
+$("#loginform").onsubmit=async e=>{
+  e.preventDefault();const button=e.submitter||e.target.querySelector("button[type=submit],button");
+  setBusy(button,true,"در حال ورود...");$("#loginerror").textContent="در حال بررسی اطلاعات ورود...";
+  try{
+    const result=await api("login",{method:"POST",body:JSON.stringify({email:$("#email").value.trim(),password:$("#password").value})});
+    state.user=result.user;await start();$("#loginerror").textContent="";
+  }catch(error){state.user=null;$("#app").classList.add("hidden");$("#userbar").classList.add("hidden");$("#loginbox").classList.remove("hidden");$("#loginerror").textContent=error.message;}
+  finally{setBusy(button,false);}
+};
+$("#logout").onclick=async()=>{
+  const button=$("#logout");setBusy(button,true,"...");
+  try{await api("logout",{method:"POST"});}catch{}
+  location.reload();
+};
+$("#nav").onclick=e=>{
+  const button=e.target.closest("button[data-tab]");if(!button||button.classList.contains("hidden"))return;
+  state.tab=button.dataset.tab;document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("active",x===button));render();
+};
+function selectField(label,items,name=label,required=true,selected=""){
+  return '<div class="field"><label>'+esc(label)+'</label><select name="'+esc(name)+'" '+(required?"required":"")+'><option value="">'+(required?"انتخاب کنید":"بدون انتخاب")+'</option>'+items.map(x=>'<option value="'+esc(x.value??x)+'" '+((x.value??x)===selected?"selected":"")+'>'+esc(x.label??x)+'</option>').join("")+'</select></div>';
+}
+function textField(label,name,value="",type="text",attrs=""){
+  return '<div class="field"><label>'+esc(label)+'</label><input name="'+esc(name)+'" type="'+type+'" value="'+esc(value)+'" '+attrs+'></div>';
+}
+function table(headers,rows,empty="اطلاعاتی ثبت نشده است."){
+  return '<div class="tablewrap"><table><thead><tr>'+headers.map(x=>'<th>'+x+'</th>').join("")+'</tr></thead><tbody>'+(rows.length?rows.join(""):'<tr><td class="empty" colspan="'+headers.length+'">'+esc(empty)+'</td></tr>')+'</tbody></table></div>';
+}
+function modal(title,body,save,saveLabel="ذخیره"){
+  $("#modalroot").innerHTML='<div class="modalback"><form class="modal" id="modalform"><h3>'+esc(title)+'</h3>'+body+'<div class="actions"><button class="btn ghost" type="button" id="cancel">انصراف</button><button class="btn" type="submit" id="save">'+esc(saveLabel)+'</button></div></form></div>';
+  $("#cancel").onclick=()=>$("#modalroot").innerHTML="";
+  $("#modalform").onsubmit=async e=>{
+    e.preventDefault();const button=$("#save");setBusy(button,true,"در حال ذخیره...");
+    try{await save($("#modalform"));$("#modalroot").innerHTML="";await load();render();notify("عملیات با موفقیت انجام شد.");}
+    catch(error){notify(error.message,"error");}
+    finally{if($("#save"))setBusy($("#save"),false);}
+  };
+}
+function filteredStudents(){
+  const q=($("#student-search")?.value||"").trim().toLocaleLowerCase("fa");
+  const cl=$("#student-class")?.value||"";
+  return state.students.filter(s=>(!cl||s.className===cl)&&(!q||[s.name,s.firstName,s.lastName,s.code].some(v=>String(v||"").toLocaleLowerCase("fa").includes(q))));
+}
+function studentRows(items){
+  return items.map(s=>'<tr><td>'+esc(s.name)+'</td><td>'+esc(s.className)+'</td><td><span class="pill">'+esc(s.code)+'</span></td><td>'+(state.user.role==="admin"?'<button class="btn small ghost" data-edit-student="'+esc(s.id)+'">ویرایش</button> <button class="btn small danger" data-delete-student="'+esc(s.id)+'">حذف</button>':"—")+'</td></tr>');
+}
+function openStudentForm(student=null){
+  const isEdit=!!student;
+  modal(isEdit?"ویرایش دانش‌آموز":"افزودن دانش‌آموز",
+    textField("نام","first",student?.firstName||"","text",'required maxlength="60"')+
+    textField("نام خانوادگی","last",student?.lastName||"","text",'required maxlength="60"')+
+    selectField("کلاس",state.classes,"className",true,student?.className||"")+
+    (isEdit?'<p class="muted">کد دانش‌آموزی تغییر نمی‌کند: '+esc(student.code)+'</p>':'<p class="muted">کد دانش‌آموزی پنج‌رقمی به‌صورت خودکار ساخته می‌شود.</p>'),
+    async form=>{
+      const data={firstName:form.elements.first.value,lastName:form.elements.last.value,className:form.elements.className.value};
+      if(!data.firstName.trim()||!data.lastName.trim())throw new Error("نام و نام خانوادگی اجباری است.");
+      await api(isEdit?"students/"+student.id:"students",{method:isEdit?"PATCH":"POST",body:JSON.stringify(data)});
+    });
+}
+function renderStudents(){
+  $("#page-actions").innerHTML=state.user.role==="admin"?'<button class="btn" id="addstudent">+ افزودن دانش‌آموز</button>':"";
+  $("#page").innerHTML='<div class="filters"><input id="student-search" placeholder="جست‌وجوی نام، نام خانوادگی یا کد..." aria-label="جست‌وجوی دانش‌آموز"><select id="student-class"><option value="">همه کلاس‌ها</option>'+state.classes.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join("")+'</select></div><div id="student-table"></div>';
+  const draw=()=>$("#student-table").innerHTML=table(["نام و نام خانوادگی","کلاس","کد دانش‌آموزی","عملیات"],studentRows(filteredStudents()),"دانش‌آموزی پیدا نشد.");
+  $("#student-search").oninput=draw;$("#student-class").onchange=draw;draw();
+  $("#addstudent")?.addEventListener("click",()=>openStudentForm());
+  $("#student-table").onclick=async e=>{
+    const edit=e.target.closest("[data-edit-student]"),del=e.target.closest("[data-delete-student]");
+    if(edit){const s=state.students.find(x=>x.id===edit.dataset.editStudent);if(s)openStudentForm(s);}
+    if(del){const s=state.students.find(x=>x.id===del.dataset.deleteStudent);if(!s||!confirm("دانش‌آموز "+s.name+" غیرفعال شود؟ سوابق نمرات او حفظ می‌شوند."))return;
+      try{await api("students/"+s.id,{method:"DELETE"});await load();render();notify("دانش‌آموز غیرفعال شد و سوابقش حفظ شدند.");}catch(error){notify(error.message,"error");}}
+  };
+}
+function gradeRow(g,admin){
+  const canEdit=admin||g.recordedBy===state.user.email;
+  return '<tr>'+(admin?'<td><input type="checkbox" class="grade-check" value="'+esc(g.id)+'" aria-label="انتخاب نمره"></td>':"")+
+    '<td>'+esc(g.studentName)+'</td><td>'+esc(g.className)+'</td><td>'+esc(g.subject)+(g.scienceBranch?' · '+esc(g.scienceBranch):"")+'</td><td>'+esc(g.score)+'</td><td>'+esc(g.assessmentType||"—")+'</td><td>'+esc(g.examName)+'</td><td>'+(canEdit?'<button class="btn small ghost" data-edit-grade="'+esc(g.id)+'">ویرایش</button>':"—")+(admin?' <button class="btn small danger" data-void-grade="'+esc(g.id)+'">حذف</button>':"")+'</td></tr>';
+}
+function gradeFilters(){
+  const cl=$("#grade-class")?.value||"",sub=$("#grade-subject")?.value||"",student=$("#grade-student")?.value||"";
+  return state.grades.filter(g=>(!cl||g.className===cl)&&(!sub||g.subject===sub)&&(!student||g.studentCode===student));
+}
+function openGradeForm(grade=null){
+  const edit=!!grade;
+  const studentOptions=state.students.map(s=>({value:s.code,label:s.name+" · "+s.className}));
+  const body=(edit?"":selectField("کلاس",state.classes,"className"))+
+    (edit?'<p class="muted">'+esc(grade.studentName)+' · '+esc(grade.className)+' · '+esc(grade.subject)+'</p>':
+      selectField("درس",state.subjects.map(s=>s.name),"subject"))+
+    (edit?"":selectField("دانش‌آموز",studentOptions,"studentCode"))+
+    textField("نمره از ۲۰","score",grade?.score??"","number",'required min="0" max="20" step="0.01"')+
+    textField("نام آزمون","examName",grade?.examName||"","text",'required maxlength="120"')+
+    selectField("نوع ارزیابی",["مستمر","آزمون کتبی","آزمون شفاهی","فعالیت کلاسی","پروژه","امتحان پایانی"],"assessmentType",true,grade?.assessmentType||"آزمون کتبی")+
+    (edit?"":textField("ضریب","coefficient","1","number",'required min="0.1" max="100" step="0.1"'))+
+    (edit?textField("ضریب","coefficient",grade.coefficient||1,"number",'required min="0.1" max="100" step="0.1"'):"")+
+    textField("تاریخ آزمون","examDate",grade?.examDate||new Date().toISOString().slice(0,10),"date",'')+
+    '<div class="field"><label>شاخه علوم (فقط برای علوم تجربی)</label><select name="scienceBranch"><option value="">ندارد</option>'+["زیست‌شناسی","فیزیک","شیمی","زمین‌شناسی"].map(x=>'<option '+(x===(grade?.scienceBranch||"")?"selected":"")+'>'+x+'</option>').join("")+'</select></div>';
+  modal(edit?"ویرایش نمره":"ثبت نمره",body,async form=>{
+    const data={score:Number(form.elements.score.value),examName:form.elements.examName.value,assessmentType:form.elements.assessmentType.value,coefficient:Number(form.elements.coefficient.value||grade?.coefficient||1),examDate:form.elements.examDate.value,scienceBranch:form.elements.scienceBranch.value};
+    if(!Number.isFinite(data.score)||data.score<0||data.score>20)throw new Error("نمره باید بین ۰ تا ۲۰ باشد.");
+    if(edit)await api("grades/"+grade.id,{method:"PATCH",body:JSON.stringify(data)});
+    else{
+      const st=state.students.find(x=>x.code===form.elements.studentCode.value);
+      if(!st)throw new Error("دانش‌آموز انتخاب‌شده معتبر نیست.");
+      data.studentCode=st.code;data.studentName=st.name;data.className=st.className;data.subject=form.elements.subject.value;
+      await api("grades",{method:"POST",body:JSON.stringify(data)});
+    }
+  });
+}
+function renderGrades(){
+  const admin=state.user.role==="admin";
+  $("#page-actions").innerHTML='<button class="btn" id="addgrade">+ ثبت نمره</button>'+(admin?' <button class="btn danger" id="resetgrades">ریست نمرات انتخاب‌شده</button>':"");
+  $("#page").innerHTML='<div class="filters"><select id="grade-class"><option value="">همه کلاس‌ها</option>'+state.classes.map(c=>'<option>'+esc(c)+'</option>').join("")+'</select><select id="grade-subject"><option value="">همه درس‌ها</option>'+state.subjects.map(s=>'<option>'+esc(s.name)+'</option>').join("")+'</select><select id="grade-student"><option value="">همه دانش‌آموزان</option>'+state.students.map(s=>'<option value="'+esc(s.code)+'">'+esc(s.name+" · "+s.className)+'</option>').join("")+'</select></div><div id="grades-table"></div>';
+  const draw=()=>$("#grades-table").innerHTML=table([...(admin?["انتخاب"] : []),"دانش‌آموز","کلاس","درس","نمره","نوع ارزیابی","آزمون","عملیات"],gradeFilters().map(g=>gradeRow(g,admin)),"نمره‌ای پیدا نشد.");
+  ["grade-class","grade-subject","grade-student"].forEach(id=>$("#"+id).onchange=draw);draw();
+  $("#addgrade").onclick=()=>openGradeForm();
+  $("#grades-table").onclick=async e=>{
+    const edit=e.target.closest("[data-edit-grade]"),del=e.target.closest("[data-void-grade]");
+    if(edit){const g=state.grades.find(x=>x.id===edit.dataset.editGrade);if(g)openGradeForm(g);}
+    if(del){const g=state.grades.find(x=>x.id===del.dataset.voidGrade);if(!g||!confirm("این نمره باطل شود؟ از میانگین و گزارش فعال کنار می‌رود ولی سابقه آن حفظ می‌شود."))return;
+      try{await api("grades/"+g.id,{method:"DELETE"});await load();render();notify("نمره باطل شد.");}catch(error){notify(error.message,"error");}}
+  };
+  $("#resetgrades")?.addEventListener("click",()=>{
+    const ids=[...document.querySelectorAll(".grade-check:checked")].map(x=>x.value);
+    if(!ids.length){notify("ابتدا حداقل یک نمره را انتخاب کنید.","error");return;}
+    if(ids.length>500){notify("در هر مرحله حداکثر ۵۰۰ نمره قابل ریست است.","error");return;}
+    modal("تأیید ریست انتخابی نمرات",'<p>تعداد نمرات انتخاب‌شده: <b>'+ids.length+'</b></p>'+textField("رمز مدیر","password","","password",'required autocomplete="current-password"')+textField('برای تأیید، عبارت «باطل کردن» را وارد کنید',"confirmText","","text",'required autocomplete="off"')+'<p class="muted">این عملیات نمره‌ها را باطل می‌کند؛ اطلاعات دانش‌آموزان و سوابق حذف نمی‌شوند.</p>',async form=>{
+      await api("grades/reset",{method:"POST",body:JSON.stringify({ids,password:form.elements.password.value,confirmText:form.elements.confirmText.value})});
+    },"باطل کردن نمرات");
+  });
+}
+function weightedAverage(items){
+  const valid=items.filter(g=>Number.isFinite(Number(g.score))&&Number.isFinite(Number(g.coefficient))&&Number(g.coefficient)>0);
+  const total=valid.reduce((n,g)=>n+Number(g.coefficient),0);
+  return total?valid.reduce((n,g)=>n+Number(g.score)*Number(g.coefficient),0)/total:null;
+}
+function barRows(items){
+  return items.map(x=>'<div class="barrow"><div><b>'+esc(x.name)+'</b><span>'+(x.avg===null?"بدون نمره":x.avg.toFixed(2)+" از ۲۰")+'</span></div><div class="bartrack"><div class="barfill" style="width:'+Math.max(0,Math.min(100,(x.avg||0)*5))+'%"></div></div></div>').join("");
+}
+function renderAnalytics(){
+  $("#page-actions").innerHTML="";
+  $("#page").innerHTML='<div class="filters"><select id="analytics-class"><option value="">همه کلاس‌ها</option>'+state.classes.map(c=>'<option>'+esc(c)+'</option>').join("")+'</select><select id="analytics-subject"><option value="">همه درس‌ها</option>'+state.subjects.map(s=>'<option>'+esc(s.name)+'</option>').join("")+'</select></div><div id="analytics-content"></div>';
+  const draw=()=>{
+    const cl=$("#analytics-class").value,sub=$("#analytics-subject").value;
+    const grades=state.grades.filter(g=>(!cl||g.className===cl)&&(!sub||g.subject===sub));
+    const avg=weightedAverage(grades),scoredCodes=new Set(grades.map(g=>g.studentCode));
+    const students=state.students.filter(s=>!cl||s.className===cl);
+    const withGrades=students.filter(s=>scoredCodes.has(s.code)).length;
+    const without=students.length-withGrades;
+    const scores=grades.map(g=>Number(g.score)).filter(Number.isFinite);
+    const min=scores.length?Math.min(...scores):null,max=scores.length?Math.max(...scores):null;
+    const classA=state.classes.filter(x=>!cl||x===cl).map(name=>({name,avg:weightedAverage(grades.filter(g=>g.className===name))}));
+    const subjects=state.subjects.filter(x=>!sub||x.name===sub).map(x=>({name:x.name,avg:weightedAverage(grades.filter(g=>g.subject===x.name))}));
+    const studentA=students.map(s=>({name:s.name,avg:weightedAverage(grades.filter(g=>g.studentCode===s.code))})).filter(x=>x.avg!==null).sort((a,b)=>b.avg-a.avg);
+    $("#analytics-content").innerHTML='<div class="stats"><div class="stat"><small>میانگین وزنی</small><strong>'+(avg===null?"—":avg.toFixed(2)+" / ۲۰")+'</strong></div><div class="stat"><small>دانش‌آموز دارای نمره</small><strong>'+withGrades+'</strong></div><div class="stat"><small>بدون نمره</small><strong>'+without+'</strong></div><div class="stat"><small>بالاترین / پایین‌ترین</small><strong>'+(max===null?"—":max.toFixed(2)+" / "+min.toFixed(2))+'</strong></div></div><div class="panel"><h3>میانگین کلاس‌ها</h3>'+barRows(classA)+'</div><div class="panel" style="margin-top:14px"><h3>مقایسه میانگین درس‌ها</h3>'+barRows(subjects)+'</div><div class="panel" style="margin-top:14px"><h3>وضعیت دانش‌آموزان</h3>'+table(["دانش‌آموز","میانگین وزنی","تعداد نمره"],studentA.map(s=>{const count=grades.filter(g=>g.studentName===s.name).length;return '<tr><td>'+esc(s.name)+'</td><td>'+s.avg.toFixed(2)+'</td><td>'+count+'</td></tr>'}),"هنوز نمره‌ای برای دانش‌آموزان ثبت نشده است.")+'</div>';
+  };
+  $("#analytics-class").onchange=draw;$("#analytics-subject").onchange=draw;draw();
+}
+function renderExams(){
+  $("#page-actions").innerHTML=state.user.role==="admin"?'<button class="btn" id="addexam">+ تعریف آزمون</button>':"";
+  $("#page").innerHTML=table(["نام آزمون","کلاس","درس","نوع","شاخه علوم","تاریخ","ضریب"],state.exams.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.className)+'</td><td>'+esc(x.subject)+'</td><td>'+esc(x.assessmentType)+'</td><td>'+esc(x.scienceBranch||"—")+'</td><td>'+esc(x.examDate)+'</td><td>'+esc(x.coefficient)+'</td></tr>'));
+  $("#addexam")?.addEventListener("click",()=>modal("تعریف آزمون",textField("نام آزمون","name","","text",'required maxlength="120"')+selectField("کلاس",state.classes,"className")+selectField("درس",state.subjects.map(s=>s.name),"subject")+selectField("نوع آزمون",["مستمر","آزمون کتبی","آزمون شفاهی","فعالیت کلاسی","پروژه","امتحان پایانی"],"assessmentType")+selectField("شاخه علوم",["زیست‌شناسی","فیزیک","شیمی","زمین‌شناسی"],"scienceBranch",false)+textField("تاریخ","examDate",new Date().toISOString().slice(0,10),"date") +textField("ضریب","coefficient","1","number",'required min="0.1" max="100" step="0.1"')+textField("توضیحات","description"),async form=>{
+    await api("exams",{method:"POST",body:JSON.stringify({name:form.elements.name.value,className:form.elements.className.value,subject:form.elements.subject.value,assessmentType:form.elements.assessmentType.value,scienceBranch:form.elements.scienceBranch.value,examDate:form.elements.examDate.value,coefficient:Number(form.elements.coefficient.value),description:form.elements.description.value})});
+  }));
+}
+function renderTeachers(){
+  $("#page-actions").innerHTML='<button class="btn" id="addteacher">+ افزودن معلم</button>';
+  $("#page").innerHTML=table(["نام","ایمیل","کلاس‌های مجاز","درس‌های مجاز","وضعیت"],state.teachers.map(t=>'<tr><td>'+esc(t.name)+'</td><td>'+esc(t.email)+'</td><td>'+esc(t.classes.join("، "))+'</td><td>'+esc(t.subjects.join("، "))+'</td><td>'+(t.active?"فعال":"غیرفعال")+'</td></tr>'));
+  $("#addteacher").onclick=()=>modal("ایجاد حساب معلم",textField("نام معلم","name","","text",'required maxlength="80"')+textField("ایمیل","email","","email","required")+textField("رمز اولیه (حداقل ۸ کاراکتر)","password","","password",'required minlength="8"')+'<div class="field"><label>کلاس‌های مجاز (انتخاب چندگانه)</label><select name="classes" multiple size="4" required>'+state.classes.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join("")+'</select></div><div class="field"><label>درس‌های مجاز (انتخاب چندگانه)</label><select name="subjects" multiple size="8" required>'+state.subjects.map(x=>'<option value="'+esc(x.name)+'">'+esc(x.name)+'</option>').join("")+'</select></div>',async form=>{
+    const classes=[...form.elements.classes.selectedOptions].map(x=>x.value),subjects=[...form.elements.subjects.selectedOptions].map(x=>x.value);
+    await api("teachers",{method:"POST",body:JSON.stringify({name:form.elements.name.value,email:form.elements.email.value,password:form.elements.password.value,classes,subjects})});
+  });
+}
+function render(){
+  const titles={overview:"نمای کلی",students:"مدیریت دانش‌آموزان",grades:"ثبت و مدیریت نمرات",exams:"آزمون‌ها",analytics:"میانگین‌گیر و نمودار",teachers:"مدیریت معلمان",classes:"کلاس‌ها و درس‌ها"};
+  $("#page-title").textContent=titles[state.tab]||"نمره‌یار";$("#page-actions").innerHTML="";
+  if(state.tab==="overview"){
+    $("#page").innerHTML='<div class="panel"><h3>به نمره‌یار خوش آمدید</h3><p class="muted">کلاس و درس را انتخاب کنید، دانش‌آموزان را مدیریت کنید و نمره‌ها را ثبت کنید.</p>'+state.classes.map(x=>'<span class="pill">'+esc(x)+'</span> ').join("")+'<p class="muted">اطلاعات از Airtable دریافت می‌شود و پس از ثبت، دائمی خواهد بود.</p></div>';return;
+  }
+  if(state.tab==="students")return renderStudents();
+  if(state.tab==="grades")return renderGrades();
+  if(state.tab==="analytics")return renderAnalytics();
+  if(state.tab==="exams")return renderExams();
+  if(state.tab==="teachers")return renderTeachers();
+  if(state.tab==="classes"){
+    $("#page").innerHTML='<div class="panel"><h3>کلاس‌های فعال</h3>'+state.classes.map(x=>'<span class="pill">'+esc(x)+'</span> ').join("")+'<h3>درس‌های فعال</h3>'+table(["نام درس","گروه","درس مادر"],state.subjects.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.category||"عمومی")+'</td><td>'+esc(x.parentSubject||"—")+'</td></tr>'))+'</div>';return;
+  }
+}
+(async()=>{
+  try{const result=await api("me");state.user=result.user;await start();}
+  catch(error){if(error.message!=="نشست ورود معتبر نیست؛ دوباره وارد شوید."&&error.message!=="ابتدا وارد سامانه شوید.")$("#loginerror").textContent="اتصال اولیه ناموفق بود: "+error.message;}
+})();
 </script></body></html>
