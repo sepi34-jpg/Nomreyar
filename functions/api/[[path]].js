@@ -104,7 +104,7 @@ async function findStudentByCode(env, code) {
 async function updateMany(env, table, records) {
   for (let i=0;i<records.length;i+=10) await airtable(env,table,"PATCH",{records:records.slice(i,i+10)});
 }
-async function onRequest({request,env}) {
+export async function onRequest({request,env}) {
   try {
     if (!signingKey(env)) return bad("برای ورود امن، ADMIN_PASSWORD را در Cloudflare به‌صورت Secret تنظیم کنید.",503);
     const url = new URL(request.url);
