@@ -249,8 +249,21 @@ function render(){
     $("#page").innerHTML='<div class="panel"><h3>کلاس‌های فعال</h3>'+state.classes.map(x=>'<span class="pill">'+esc(x)+'</span> ').join("")+'<h3>درس‌های فعال</h3>'+table(["نام درس","گروه","درس مادر"],state.subjects.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.category||"عمومی")+'</td><td>'+esc(x.parentSubject||"—")+'</td></tr>'))+'</div>';return;
   }
 }
+// ابتدا وضعیت نشست قبلی بررسی می‌شود؛ فرم ورود تا پایان بررسی نمایش داده نمی‌شود
+// تا کاربر هنگام بارگذاری ناخواسته روی فرم کلیک نکند.
+$("#loginbox").classList.add("hidden");
 (async()=>{
-  try{const result=await api("me");state.user=result.user;await start();}
-  catch(error){if(error.message!=="نشست ورود معتبر نیست؛ دوباره وارد شوید."&&error.message!=="ابتدا وارد سامانه شوید.")$("#loginerror").textContent="اتصال اولیه ناموفق بود: "+error.message;}
+  try{
+    const result=await api("me");
+    state.user=result.user;
+    await start();
+  }catch(error){
+    state.user=null;
+    $("#app").classList.add("hidden");
+    $("#userbar").classList.add("hidden");
+    $("#loginbox").classList.remove("hidden");
+    if(error.message!=="نشست ورود معتبر نیست؛ دوباره وارد شوید."&&error.message!=="ابتدا وارد سامانه شوید.")
+      $("#loginerror").textContent="اتصال اولیه ناموفق بود: "+error.message;
+  }
 })();
 </script></body></html>
