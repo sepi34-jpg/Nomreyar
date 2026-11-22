@@ -14,8 +14,8 @@ async function current(req,env){const m=(req.headers.get("cookie")||"").match(/(
 async function log(env,u,action,type,id,after){try{await airtable(env,T.logs,"POST",{records:[{fields:{Action:action,"Entity Type":type,"Entity ID":id||"","After":JSON.stringify(after),"Actor Email":u.email,Timestamp:new Date().toISOString()}}]})}catch{}}
 export async function onRequest({request,env}){try{if(!signingKey(env))return bad("برای امنیت ورود، ADMIN_PASSWORD را در Cloudflare به‌صورت Secret تنظیم کنید.",503);const url=new URL(request.url),path=url.pathname.replace(/^\/api\/?/,"").replace(/\/$/,""),method=request.method;
 if(path==="login"&&method==="POST"){const b=await request.json(),email=String(b.email||"").trim().toLowerCase(),password=String(b.password||"");if(!email||!password)return bad("ایمیل و رمز عبور لازم است.");let u;
-const adminEmail=String(env.ADMIN_EMAIL||"").trim().toLowerCase();
-if(adminEmail&&email===adminEmail){if(!env.ADMIN_PASSWORD||password!==env.ADMIN_PASSWORD)return bad("ایمیل یا رمز عبور اشتباه است.",401);u={email,role:"admin",name:"مدیر سامانه"}}
+const adminEmail=String(env.ADMIN_EMAIL||"deldarisepehr@gmail.com").trim().toLowerCase();
+if(email===adminEmail){if(!env.ADMIN_PASSWORD||password.trim()!==String(env.ADMIN_PASSWORD).trim())return bad("ایمیل یا رمز عبور اشتباه است.",401);u={email,role:"admin",name:"مدیر سامانه"}}
 else{const users=await all(T.users,env),rec=users.find(r=>(f(r).Email||"").toLowerCase()===email);if(!rec)return bad("حسابی پیدا نشد؛ مدیر باید حساب را ایجاد کند.",401);const x=f(rec);if(x.Active===false)return bad("حساب غیرفعال است.",403);if(!x["Password Hash"]||!await verifyPassword(password,x["Password Hash"]))return bad("ایمیل یا رمز عبور اشتباه است.",401);u={email,role:choice(x.Role)==="مدیر"?"admin":"teacher",name:x["Display Name"]||email}}
 const token=await session(u,env);return json({user:u},200,{"Set-Cookie":COOKIE+"="+token+"; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=28800"})}
 if(path==="logout")return json({ok:true},200,{"Set-Cookie":COOKIE+"=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0"});
