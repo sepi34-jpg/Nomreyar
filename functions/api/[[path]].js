@@ -17,8 +17,8 @@ if(path==="login"&&method==="POST"){const b=await request.json(),email=String(b.
 const adminEmail=String(env.ADMIN_EMAIL||"").trim().toLowerCase();
 if(adminEmail&&email===adminEmail){if(!env.ADMIN_PASSWORD||password!==env.ADMIN_PASSWORD)return bad("ایمیل یا رمز عبور اشتباه است.",401);u={email,role:"admin",name:"مدیر سامانه"}}
 else{const users=await all(T.users,env),rec=users.find(r=>(f(r).Email||"").toLowerCase()===email);if(!rec)return bad("حسابی پیدا نشد؛ مدیر باید حساب را ایجاد کند.",401);const x=f(rec);if(x.Active===false)return bad("حساب غیرفعال است.",403);if(!x["Password Hash"]||!await verifyPassword(password,x["Password Hash"]))return bad("ایمیل یا رمز عبور اشتباه است.",401);u={email,role:choice(x.Role)==="مدیر"?"admin":"teacher",name:x["Display Name"]||email}}
-const token=await session(u,env);return json({user:u},{headers:{"Set-Cookie":COOKIE+"="+token+"; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=28800"}})}
-if(path==="logout")return json({ok:true},{headers:{"Set-Cookie":COOKIE+"=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0"}});
+const token=await session(u,env);return json({user:u},200,{"Set-Cookie":COOKIE+"="+token+"; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=28800"})}
+if(path==="logout")return json({ok:true},200,{"Set-Cookie":COOKIE+"=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0"});
 const u=await current(request,env);if(!u)return bad("ابتدا وارد سامانه شوید.",401);if(path==="me")return json({user:u});
 if(path==="classes"&&method==="GET"){const a=await all(T.classes,env);return json({items:a.filter(r=>f(r).Active!==false).map(r=>({name:f(r)["Class Name"]||r.id}))})}
 if(path==="subjects"&&method==="GET"){const a=await all(T.subjects,env);return json({items:a.filter(r=>f(r).Active===true&&choice(f(r).Category)!=="درس تکمیلی").map(r=>({name:f(r)["Subject Name"],category:choice(f(r).Category)})).filter(x=>x.name)})}
