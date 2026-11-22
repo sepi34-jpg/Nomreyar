@@ -1,4 +1,4 @@
-import { onRequest } from "./functions/api/[[path]].js";
+import { onRequest } from "./api.js";
 
 export default {
   async fetch(request, env, ctx) {
