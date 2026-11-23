@@ -203,9 +203,10 @@ export async function onRequest({request,env}) {
       if (!record || fields(record).Active===false) return bad("دانش‌آموز پیدا نشد.",404);
       const old=fields(record);
       if (method==="DELETE") {
-        await airtable(env,T.students,"PATCH",{records:[{id,fields:{Active:false}}]});
-        await log(env,user,"DEACTIVATE","Student",id,old,{Active:false},"حذف نرم؛ سوابق نمره حفظ شدند.");
-        return json({ok:true,message:"دانش‌آموز غیرفعال شد؛ سوابق نمرات حفظ شده‌اند."});
+        const result=await airtable(env,T.students,"DELETE",null,"/"+encodeURIComponent(id));
+        if (result.deleted!==true) return bad("حذف دانش‌آموز از Airtable تأیید نشد؛ دوباره تلاش کنید.",502);
+        await log(env,user,"DELETE","Student",id,old,{deleted:true},"حذف قطعی رکورد دانش‌آموز؛ سوابق نمرات قبلی حفظ شدند.");
+        return json({ok:true,deleted:true,message:"رکورد دانش‌آموز حذف شد؛ سوابق نمرات قبلی حفظ شده‌اند."});
       }
       let b; try { b=await request.json(); } catch { return bad("اطلاعات ویرایش معتبر نیست."); }
       const first=clean(b.firstName).replace(/\s+/g," "),last=clean(b.lastName).replace(/\s+/g," "),cl=clean(b.className);
