@@ -330,7 +330,7 @@ function renderReportCard(){
    ctx.fillStyle="#172b50";ctx.font="bold 17px Vazirmatn,Tahoma";ctx.textAlign="center";
    const centers=[940,800,590,390,160];vals.forEach((v,j)=>ctx.fillText(j<2?v:(v===null?"—":v.toFixed(2)),centers[j],y+rowH/2+7));
   });
-  const tableEnd=top+headerH+list.length*rowH+22,overall=avgFor(grades),same=state.students.map(st=>({code:st.code,avg:avgFor(state.grades.filter(g=>g.studentCode===st.code))})).filter(x=>x.avg!==null).sort((a,b)=>b.avg-a.avg),rank=s?same.findIndex(x=>x.code===s.code)+1:0;
+  const tableEnd=top+headerH+list.length*rowH+22,overall=avgFor(grades),same=state.students.filter(st=>!s||st.className===s.className).map(st=>({code:st.code,avg:avgFor(state.grades.filter(g=>g.studentCode===st.code))})).filter(x=>x.avg!==null).sort((a,b)=>b.avg-a.avg),rank=s?same.findIndex(x=>x.code===s.code)+1:0;
   const boxY=Math.min(tableEnd,1120);
   ctx.fillStyle="#10254b";ctx.font="bold 20px Vazirmatn,Tahoma";ctx.textAlign="center";
   const summary=[["معدل کل",overall===null?"—":overall.toFixed(2)+" از ۲۰"],["رتبه در کلاس",rank?rank+" از "+same.length:"—"],["وضعیت قبولی",overall===null?"بدون نمره":overall>=10?"قبول":"نیازمند بررسی"]];
