@@ -18,6 +18,42 @@
 const $=s=>document.querySelector(s);
 const state={user:null,tab:"overview",classes:[],subjects:[],students:[],grades:[],exams:[],teachers:[]};
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const faDigits=s=>String(s??"").replace(/[۰-۹]/g,d=>"۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d));
+function jalaliParts(date){
+ const d=date instanceof Date?date:new Date(String(date).slice(0,10)+"T12:00:00Z");
+ const p=new Intl.DateTimeFormat("en-US-u-ca-persian-nu-latn",{year:"numeric",month:"numeric",day:"numeric",timeZone:"UTC"}).formatToParts(d),v={};
+ p.forEach(x=>{if(x.type!=="literal")v[x.type]=Number(x.value);});
+ return {y:v.year,m:v.month,d:v.day};
+}
+function toJalali(iso){
+ if(!iso)return "";
+ const p=jalaliParts(iso);
+ return [p.y,String(p.m).padStart(2,"0"),String(p.d).padStart(2,"0")].join("/");
+}
+function jalaliToISO(value){
+ const raw=faDigits(value).trim().replace(/[.-]/g,"/");
+ const m=raw.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+ if(!m)throw new Error("تاریخ را به شکل شمسی سال/ماه/روز وارد کنید؛ نمونه: ۱۴۰۵/۰۸/۰۲");
+ const jy=+m[1],jm=+m[2],jd=+m[3];
+ if(jm<1||jm>12||jd<1||jd>(jm<=6?31:jm<=11?30:30))throw new Error("روز یا ماه تاریخ شمسی معتبر نیست.");
+ const start=Date.UTC(jy+621,2,18);
+ for(let i=0;i<370;i++){
+  const dt=new Date(start+i*86400000),p=jalaliParts(dt);
+  if(p.y===jy&&p.m===jm&&p.d===jd)return dt.toISOString().slice(0,10);
+ }
+ throw new Error("تبدیل تاریخ شمسی انجام نشد؛ تاریخ را بررسی کنید.");
+}
+function lineChart(title,items){
+ const data=items.filter(x=>Number.isFinite(Number(x.value))).sort((a,b)=>String(a.sort||a.label).localeCompare(String(b.sort||b.label)));
+ if(!data.length)return '<div class="empty">هنوز نمره‌ای برای نمایش نمودار ثبت نشده است.</div>';
+ const W=680,H=245,L=42,R=18,T=20,B=48,iw=W-L-R,ih=H-T-B;
+ const pts=data.map((x,i)=>({x:L+(data.length===1?iw/2:i*iw/(data.length-1)),y:T+ih-(Math.max(0,Math.min(20,Number(x.value)))/20)*ih,...x}));
+ const poly=pts.map(p=>p.x+","+p.y).join(" ");
+ const grid=[0,5,10,15,20].map(v=>{const y=T+ih-(v/20)*ih;return '<line x1="'+L+'" y1="'+y+'" x2="'+(W-R)+'" y2="'+y+'" stroke="#e7edf6"/><text x="'+(L-9)+'" y="'+(y+4)+'" text-anchor="end" font-size="11" fill="#718096">'+v+'</text>';}).join("");
+ const marks=pts.map(p=>'<circle cx="'+p.x+'" cy="'+p.y+'" r="4.5" fill="#496ff0"><title>'+esc(p.label)+': '+Number(p.value).toFixed(2)+'</title></circle><text x="'+p.x+'" y="'+(H-22)+'" text-anchor="middle" font-size="10" fill="#64748b">'+esc(String(p.label).slice(0,12))+'</text>').join("");
+ return '<div class="panel line-panel"><h3>'+esc(title)+'</h3><div class="line-scroll"><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(title)+'">'+grid+'<polyline points="'+poly+'" fill="none" stroke="#496ff0" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>'+marks+'</svg></div></div>';
+}
+
 const api=async(path,opts={})=>{
   let response;
   try{response=await fetch("/api/"+path,{...opts,headers:{"Content-Type":"application/json",...(opts.headers||{})},credentials:"same-origin",cache:"no-store"});}
@@ -140,30 +176,40 @@ function gradeFilters(){
   const cl=$("#grade-class")?.value||"",sub=$("#grade-subject")?.value||"",student=$("#grade-student")?.value||"";
   return state.grades.filter(g=>(!cl||g.className===cl)&&(!sub||g.subject===sub)&&(!student||g.studentCode===student));
 }
+
 function openGradeForm(grade=null){
-  const edit=!!grade;
-  const studentOptions=state.students.map(s=>({value:s.code,label:s.name+" · "+s.className}));
-  const body=(edit?'<p class="muted">'+esc(grade.studentName)+' · '+esc(grade.className)+' · '+esc(grade.subject)+'</p>':
-      '<p class="muted">کلاس از روی کلاس دانش‌آموز انتخاب‌شده تعیین می‌شود.</p>'+selectField("درس",state.subjects.map(s=>s.name),"subject"))+
-    (edit?"":selectField("دانش‌آموز",studentOptions,"studentCode"))+
-    textField("نمره از ۲۰","score",grade?.score??"","number",'required min="0" max="20" step="0.01"')+
-    textField("نام آزمون","examName",grade?.examName||"","text",'required maxlength="120"')+
-    selectField("نوع ارزیابی",["مستمر","آزمون کتبی","آزمون شفاهی","فعالیت کلاسی","پروژه","امتحان پایانی"],"assessmentType",true,grade?.assessmentType||"آزمون کتبی")+
-    (edit?"":textField("ضریب","coefficient","1","number",'required min="0.1" max="100" step="0.1"'))+
-    (edit?textField("ضریب","coefficient",grade.coefficient||1,"number",'required min="0.1" max="100" step="0.1"'):"")+
-    textField("تاریخ آزمون","examDate",grade?.examDate||new Date().toISOString().slice(0,10),"date",'')+
-    '<div class="field"><label>شاخه علوم (فقط برای علوم تجربی)</label><select name="scienceBranch"><option value="">ندارد</option>'+["زیست‌شناسی","فیزیک","شیمی","زمین‌شناسی"].map(x=>'<option '+(x===(grade?.scienceBranch||"")?"selected":"")+'>'+x+'</option>').join("")+'</select></div>';
-  modal(edit?"ویرایش نمره":"ثبت نمره",body,async form=>{
-    const data={score:Number(form.elements.score.value),examName:form.elements.examName.value,assessmentType:form.elements.assessmentType.value,coefficient:Number(form.elements.coefficient.value||grade?.coefficient||1),examDate:form.elements.examDate.value,scienceBranch:form.elements.scienceBranch.value};
-    if(!Number.isFinite(data.score)||data.score<0||data.score>20)throw new Error("نمره باید بین ۰ تا ۲۰ باشد.");
-    if(edit)await api("grades/"+grade.id,{method:"PATCH",body:JSON.stringify(data)});
-    else{
-      const st=state.students.find(x=>x.code===form.elements.studentCode.value);
-      if(!st)throw new Error("دانش‌آموز انتخاب‌شده معتبر نیست.");
-      data.studentCode=st.code;data.studentName=st.name;data.className=st.className;data.subject=form.elements.subject.value;
-      await api("grades",{method:"POST",body:JSON.stringify(data)});
-    }
+ const edit=!!grade;
+ const studentPicker=edit?"":'<div class="field"><label>جست‌وجوی دانش‌آموز</label><input name="studentSearch" type="search" placeholder="نام یا نام خانوادگی را بنویسید..." autocomplete="off"></div><div class="field"><label>انتخاب دانش‌آموز از فهرست</label><select name="studentCode" required><option value="">ابتدا جست‌وجو یا انتخاب کنید</option>'+state.students.map(s=>'<option value="'+esc(s.code)+'">'+esc(s.name+" · "+s.className)+'</option>').join("")+'</select></div>';
+ const body=(edit?'<p class="muted">'+esc(grade.studentName)+' · '+esc(grade.className)+' · '+esc(grade.subject)+'</p>':'<p class="muted">می‌توانید نام دانش‌آموز را جست‌وجو کنید یا از فهرست انتخاب کنید.</p>'+selectField("درس",state.subjects.map(s=>s.name),"subject"))+
+ studentPicker+
+ textField("نمره از ۲۰","score",grade?.score??"","number",'required min="0" max="20" step="0.01"')+
+ textField("نام آزمون","examName",grade?.examName||"","text",'required maxlength="120"')+
+ selectField("نوع ارزیابی",["مستمر","آزمون کتبی","آزمون شفاهی","فعالیت کلاسی","پروژه","امتحان پایانی"],"assessmentType",true,grade?.assessmentType||"آزمون کتبی")+
+ (edit?textField("ضریب","coefficient",grade.coefficient||1,"number",'required min="0.1" max="100" step="0.1"'):textField("ضریب","coefficient","1","number",'required min="0.1" max="100" step="0.1"'))+
+ textField("تاریخ آزمون (شمسی)","examDate",toJalali(grade?.examDate||new Date().toISOString().slice(0,10)),"text",'required inputmode="numeric" placeholder="۱۴۰۵/۰۸/۰۲"')+
+ '<div class="field"><label>شاخه علوم (فقط برای علوم تجربی)</label><select name="scienceBranch"><option value="">ندارد</option>'+["زیست‌شناسی","فیزیک","شیمی","زمین‌شناسی"].map(x=>'<option '+(x===(grade?.scienceBranch||"")?"selected":"")+'>'+x+'</option>').join("")+'</select></div>';
+ modal(edit?"ویرایش نمره":"ثبت نمره",body,async form=>{
+  const data={score:Number(form.elements.score.value),examName:form.elements.examName.value,assessmentType:form.elements.assessmentType.value,coefficient:Number(form.elements.coefficient.value||grade?.coefficient||1),examDate:jalaliToISO(form.elements.examDate.value),scienceBranch:form.elements.scienceBranch.value};
+  if(!Number.isFinite(data.score)||data.score<0||data.score>20)throw new Error("نمره باید بین ۰ تا ۲۰ باشد.");
+  if(edit)await api("grades/"+grade.id,{method:"PATCH",body:JSON.stringify(data)});
+  else{
+   const st=state.students.find(x=>x.code===form.elements.studentCode.value);
+   if(!st)throw new Error("دانش‌آموز انتخاب‌شده معتبر نیست.");
+   data.studentCode=st.code;data.studentName=st.name;data.className=st.className;data.subject=form.elements.subject.value;
+   await api("grades",{method:"POST",body:JSON.stringify(data)});
+  }
+ });
+ if(!edit){
+  const search=document.querySelector('#modalroot input[name="studentSearch"]');
+  const select=document.querySelector('#modalroot select[name="studentCode"]');
+  search?.addEventListener("input",()=>{
+   const q=search.value.trim().toLocaleLowerCase("fa");
+   const matches=state.students.filter(s=>(s.name+" "+s.className+" "+s.code).toLocaleLowerCase("fa").includes(q));
+   const previous=select.value;
+   select.innerHTML='<option value="">'+(matches.length?"دانش‌آموز را انتخاب کنید":"نتیجه‌ای پیدا نشد")+'</option>'+matches.map(s=>'<option value="'+esc(s.code)+'">'+esc(s.name+" · "+s.className)+'</option>').join("");
+   if(matches.some(s=>s.code===previous))select.value=previous;
   });
+ }
 }
 function renderGrades(){
   const admin=state.user.role==="admin";
@@ -187,37 +233,38 @@ function renderGrades(){
     },"باطل کردن نمرات");
   });
 }
+
 function weightedAverage(items){
-  const valid=items.filter(g=>Number.isFinite(Number(g.score))&&Number.isFinite(Number(g.coefficient))&&Number(g.coefficient)>0);
-  const total=valid.reduce((n,g)=>n+Number(g.coefficient),0);
-  return total?valid.reduce((n,g)=>n+Number(g.score)*Number(g.coefficient),0)/total:null;
-}
-function barRows(items){
-  return items.map(x=>'<div class="barrow"><div><b>'+esc(x.name)+'</b><span>'+(x.avg===null?"بدون نمره":x.avg.toFixed(2)+" از ۲۰")+'</span></div><div class="bartrack"><div class="barfill" style="width:'+Math.max(0,Math.min(100,(x.avg||0)*5))+'%"></div></div></div>').join("");
+ const valid=items.filter(g=>Number.isFinite(Number(g.score))&&Number.isFinite(Number(g.coefficient))&&Number(g.coefficient)>0);
+ const total=valid.reduce((n,g)=>n+Number(g.coefficient),0);
+ return total?valid.reduce((n,g)=>n+Number(g.score)*Number(g.coefficient),0)/total:null;
 }
 function renderAnalytics(){
-  $("#page-actions").innerHTML="";
-  $("#page").innerHTML='<div class="filters"><select id="analytics-class"><option value="">همه کلاس‌ها</option>'+state.classes.map(c=>'<option>'+esc(c)+'</option>').join("")+'</select><select id="analytics-subject"><option value="">همه درس‌ها</option>'+state.subjects.map(s=>'<option>'+esc(s.name)+'</option>').join("")+'</select></div><div id="analytics-content"></div>';
-  const draw=()=>{
-    const cl=$("#analytics-class").value,sub=$("#analytics-subject").value;
-    const grades=state.grades.filter(g=>(!cl||g.className===cl)&&(!sub||g.subject===sub));
-    const avg=weightedAverage(grades),scoredCodes=new Set(grades.map(g=>g.studentCode));
-    const students=state.students.filter(s=>!cl||s.className===cl);
-    const withGrades=students.filter(s=>scoredCodes.has(s.code)).length;
-    const without=students.length-withGrades;
-    const best=grades.filter(g=>Number.isFinite(Number(g.score))).sort((a,b)=>Number(b.score)-Number(a.score))[0]||null;
-    const worst=grades.filter(g=>Number.isFinite(Number(g.score))).sort((a,b)=>Number(a.score)-Number(b.score))[0]||null;
-    const classA=state.classes.filter(x=>!cl||x===cl).map(name=>({name,avg:weightedAverage(grades.filter(g=>g.className===name))}));
-    const subjects=state.subjects.filter(x=>!sub||x.name===sub).map(x=>({name:x.name,avg:weightedAverage(grades.filter(g=>g.subject===x.name))}));
-    const studentA=students.map(s=>({name:s.name,className:s.className,code:s.code,avg:weightedAverage(grades.filter(g=>g.studentCode===s.code)),count:grades.filter(g=>g.studentCode===s.code).length})).sort((a,b)=>(b.avg??-1)-(a.avg??-1));
-    const studentSubjectRows=students.flatMap(s=>state.subjects.filter(x=>!sub||x.name===sub).map(x=>{
-      const list=grades.filter(g=>g.studentCode===s.code&&g.subject===x.name);
-      const value=weightedAverage(list);
-      return value===null?null:'<tr><td>'+esc(s.name)+'</td><td>'+esc(s.className)+'</td><td>'+esc(x.name)+'</td><td>'+value.toFixed(2)+'</td><td>'+list.length+'</td></tr>';
-    }).filter(Boolean));
-    $("#analytics-content").innerHTML='<div class="stats"><div class="stat"><small>میانگین وزنی</small><strong>'+(avg===null?"—":avg.toFixed(2)+" / ۲۰")+'</strong></div><div class="stat"><small>دانش‌آموز دارای نمره</small><strong>'+withGrades+'</strong></div><div class="stat"><small>بدون نمره</small><strong>'+without+'</strong></div><div class="stat"><small>بالاترین / پایین‌ترین</small><strong>'+(best===null?"—":Number(best.score).toFixed(2)+" / "+Number(worst.score).toFixed(2))+'</strong><small>'+(best?esc(best.studentName):"")+(worst?" · "+esc(worst.studentName):"")+'</small></div></div><div class="panel"><h3>میانگین کلاس‌ها</h3>'+barRows(classA)+'</div><div class="panel" style="margin-top:14px"><h3>مقایسه میانگین درس‌ها</h3>'+barRows(subjects)+'</div><div class="panel" style="margin-top:14px"><h3>میانگین کلی هر دانش‌آموز</h3>'+table(["دانش‌آموز","کلاس","میانگین وزنی","تعداد نمره"],studentA.map(s=>'<tr><td>'+esc(s.name)+'</td><td>'+esc(s.className)+'</td><td>'+(s.avg===null?"—":s.avg.toFixed(2))+'</td><td>'+s.count+'</td></tr>'),"هنوز نمره‌ای برای دانش‌آموزان ثبت نشده است.")+'</div><div class="panel" style="margin-top:14px"><h3>میانگین هر دانش‌آموز در هر درس</h3>'+table(["دانش‌آموز","کلاس","درس","میانگین","تعداد نمره"],studentSubjectRows,"برای این فیلتر نمره‌ای وجود ندارد.")+'</div>';
-  };
-  $("#analytics-class").onchange=draw;$("#analytics-subject").onchange=draw;draw();
+ $("#page-actions").innerHTML="";
+ $("#page").innerHTML='<div class="filters"><select id="analytics-class"><option value="">همه کلاس‌ها</option>'+state.classes.map(c=>'<option>'+esc(c)+'</option>').join("")+'</select><select id="analytics-subject"><option value="">همه درس‌ها</option>'+state.subjects.map(s=>'<option>'+esc(s.name)+'</option>').join("")+'</select><select id="analytics-student"><option value="">انتخاب دانش‌آموز برای نمودار پیشرفت</option>'+state.students.map(s=>'<option value="'+esc(s.code)+'">'+esc(s.name+" · "+s.className)+'</option>').join("")+'</select></div><div id="analytics-content"></div>';
+ const draw=()=>{
+  const cl=$("#analytics-class").value,sub=$("#analytics-subject").value,studentCode=$("#analytics-student").value;
+  const grades=state.grades.filter(g=>(!cl||g.className===cl)&&(!sub||g.subject===sub));
+  const avg=weightedAverage(grades),scoredCodes=new Set(grades.map(g=>g.studentCode));
+  const students=state.students.filter(s=>!cl||s.className===cl);
+  const withGrades=students.filter(s=>scoredCodes.has(s.code)).length,without=students.length-withGrades;
+  const best=grades.filter(g=>Number.isFinite(Number(g.score))).sort((a,b)=>Number(b.score)-Number(a.score))[0]||null;
+  const worst=grades.filter(g=>Number.isFinite(Number(g.score))).sort((a,b)=>Number(a.score)-Number(b.score))[0]||null;
+  const classA=state.classes.filter(x=>!cl||x===cl).map(name=>({name,value:weightedAverage(grades.filter(g=>g.className===name))})).filter(x=>x.value!==null);
+  const subjects=state.subjects.filter(x=>!sub||x.name===sub).map(x=>({name:x.name,value:weightedAverage(grades.filter(g=>g.subject===x.name))})).filter(x=>x.value!==null);
+  const studentA=students.map(s=>({name:s.name,className:s.className,code:s.code,value:weightedAverage(grades.filter(g=>g.studentCode===s.code)),count:grades.filter(g=>g.studentCode===s.code).length})).sort((a,b)=>(b.value??-1)-(a.value??-1));
+  const studentSubjectRows=students.flatMap(s=>state.subjects.filter(x=>!sub||x.name===sub).map(x=>{
+   const list=grades.filter(g=>g.studentCode===s.code&&g.subject===x.name),value=weightedAverage(list);
+   return value===null?null:'<tr><td>'+esc(s.name)+'</td><td>'+esc(s.className)+'</td><td>'+esc(x.name)+'</td><td>'+value.toFixed(2)+'</td><td>'+list.length+'</td></tr>';
+  }).filter(Boolean));
+  const selected=state.students.find(s=>s.code===studentCode);
+  const individualCharts=selected?state.subjects.filter(x=>!sub||x.name===sub).map(x=>{
+   const list=state.grades.filter(g=>g.studentCode===selected.code&&g.subject===x.name).sort((a,b)=>String(a.examDate||"").localeCompare(String(b.examDate||"")));
+   return list.length?lineChart(x.name,list.map((g,i)=>({label:g.examDate?toJalali(g.examDate):"نمره "+(i+1),sort:(g.examDate||"")+"-"+String(i).padStart(3,"0"),value:Number(g.score)}))):"";
+  }).join(""):'<div class="empty">برای مشاهده نمودار پیشرفت، یک دانش‌آموز را انتخاب کنید.</div>';
+  $("#analytics-content").innerHTML='<div class="stats"><div class="stat"><small>میانگین وزنی</small><strong>'+(avg===null?"—":avg.toFixed(2)+" / ۲۰")+'</strong></div><div class="stat"><small>دانش‌آموز دارای نمره</small><strong>'+withGrades+'</strong></div><div class="stat"><small>بدون نمره</small><strong>'+without+'</strong></div><div class="stat"><small>بالاترین / پایین‌ترین</small><strong>'+(best===null?"—":Number(best.score).toFixed(2)+" / "+Number(worst.score).toFixed(2))+'</strong><small>'+(best?esc(best.studentName):"")+(worst?" · "+esc(worst.studentName):"")+'</small></div></div>'+lineChart("میانگین کلاس‌ها",classA.map(x=>({label:x.name,value:x.value})))+lineChart("مقایسه میانگین درس‌ها",subjects.map(x=>({label:x.name,value:x.value})))+lineChart("میانگین کلی دانش‌آموزان",studentA.filter(x=>x.value!==null).map(x=>({label:x.name,value:x.value})))+'<div class="panel" style="margin-top:14px"><h3>پیشرفت درسی دانش‌آموز</h3><p class="muted">'+(selected?esc(selected.name+" · "+selected.className):"هنوز دانش‌آموزی انتخاب نشده است")+'</p>'+individualCharts+'</div><div class="panel" style="margin-top:14px"><h3>میانگین هر دانش‌آموز در هر درس</h3>'+table(["دانش‌آموز","کلاس","درس","میانگین","تعداد نمره"],studentSubjectRows,"برای این فیلتر نمره‌ای وجود ندارد.")+'</div>';
+ };
+ ["analytics-class","analytics-subject","analytics-student"].forEach(id=>$("#"+id).onchange=draw);draw();
 }
 function renderExams(){
   $("#page-actions").innerHTML=state.user.role==="admin"?'<button class="btn" id="addexam">+ تعریف آزمون</button>':"";
