@@ -163,8 +163,17 @@ function renderStudents(){
   $("#student-table").onclick=async e=>{
     const edit=e.target.closest("[data-edit-student]"),del=e.target.closest("[data-delete-student]");
     if(edit){const s=state.students.find(x=>x.id===edit.dataset.editStudent);if(s)openStudentForm(s);}
-    if(del){const s=state.students.find(x=>x.id===del.dataset.deleteStudent);if(!s||!confirm("دانش‌آموز "+s.name+" غیرفعال شود؟ سوابق نمرات او حفظ می‌شوند."))return;
-      try{await api("students/"+s.id,{method:"DELETE"});await load();render();notify("دانش‌آموز غیرفعال شد و سوابقش حفظ شدند.");}catch(error){notify(error.message,"error");}}
+    if(del){
+      const s=state.students.find(x=>x.id===del.dataset.deleteStudent);
+      if(!s||!confirm("آیا از حذف قطعی دانش‌آموز «"+s.name+"» مطمئن هستید؟ این کار قابل بازگشت نیست. سوابق نمرات قبلی او حفظ می‌شوند."))return;
+      del.disabled=true;del.textContent="در حال حذف...";
+      try{
+        const result=await api("students/"+encodeURIComponent(s.id),{method:"DELETE"});
+        if(!result.deleted)throw new Error(result.message||"حذف دانش‌آموز تأیید نشد.");
+        state.students=state.students.filter(x=>x.id!==s.id);
+        await load();render();notify("دانش‌آموز حذف شد؛ سوابق نمرات قبلی حفظ شدند.");
+      }catch(error){notify(error.message,"error");del.disabled=false;del.textContent="حذف";}
+    }
   };
 }
 function gradeRow(g,admin){
