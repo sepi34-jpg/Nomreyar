@@ -30,7 +30,7 @@ async function current(request, env) {
   if (!payload || !signature || signature !== await sign(payload, signingKey(env))) return null;
   try {
     const user = JSON.parse(new TextDecoder().decode(unb64(payload)));
-    return user.exp > Date.now() && ["admin","teacher"].includes(user.role) ? user : null;
+    return user.exp > Date.now() && ["admin","teacher","student"].includes(user.role) ? user : null;
   } catch { return null; }
 }
 async function airtable(env, table, method="GET", body=null, query="") {
@@ -143,10 +143,34 @@ export async function onRequest({request,env}) {
       const token=await session(user,env);
       return json({user},200,{"Set-Cookie":cookie(token,28800)});
     }
+    if (path==="student/login" && method==="POST") {
+      let body;try{body=await request.json();}catch{return bad("کد ورود معتبر نیست.");}
+      const code=clean(body.code).replace(/[۰-۹]/g,d=>"۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d));
+      if(!/^\d{5}$/.test(code))return bad("کد دانش‌آموزی باید دقیقاً پنج رقم باشد.");
+      const student=await findStudentByCode(env,code);
+      if(!student)return bad("کد دانش‌آموزی نادرست است یا حساب فعال نیست.",401);
+      const x=fields(student),user={role:"student",studentId:student.id,studentCode:code,name:[x["First Name"],x["Last Name"]].filter(Boolean).join(" "),className:clean(x["Class Name"])};
+      const token=await session(user,env);
+      return json({user:{role:"student"}},200,{"Set-Cookie":cookie(token,28800)});
+    }
     if (path==="logout" && method==="POST") return json({ok:true},200,{"Set-Cookie":cookie("",0)});
     const user=await current(request,env);
     if (!user) return bad("نشست ورود معتبر نیست؛ دوباره وارد شوید.",401);
-    if (path==="me" && method==="GET") return json({user});
+    if (path==="me" && method==="GET") return json({user}); 
+    if(user.role==="student"){
+      if(path!=="student/dashboard"||method!=="GET")return bad("این بخش فقط برای پنل دانش‌آموز مجاز است.",403);
+      const student=await findStudentByCode(env,user.studentCode);
+      if(!student||student.id!==user.studentId)return bad("حساب دانش‌آموز پیدا نشد یا غیرفعال شده است.",401);
+      const sf=fields(student),rows=await all(T.grades,env);
+      const grades=rows.filter(r=>clean(fields(r)["Student Code"])===user.studentCode&&["معتبر","اصلاح‌شده"].includes(choice(fields(r).Status))).map(r=>{const x=fields(r);return {subject:clean(x.Subject),assessmentType:choice(x["Assessment Type"]),examName:clean(x["Exam Name"]),score:Number(x.Score),coefficient:Number(x.Coefficient)||1,examDate:x["Exam Date"]||""};});
+      const weighted=items=>{const den=items.reduce((n,x)=>n+x.coefficient,0);return den?items.reduce((n,x)=>n+x.score*x.coefficient,0)/den:0;};
+      const average=weighted(grades),allGrades=rows.filter(r=>["معتبر","اصلاح‌شده"].includes(choice(fields(r).Status)));
+      const students=(await all(T.students,env)).filter(r=>fields(r).Active!==false);
+      const averages=students.map(r=>{const code=clean(fields(r)["Student Code"]),gs=allGrades.filter(g=>clean(fields(g)["Student Code"])===code).map(g=>({score:Number(fields(g).Score),coefficient:Number(fields(g).Coefficient)||1}));return {code,className:clean(fields(r)["Class Name"]),average:weighted(gs)};}).filter(x=>x.code);
+      const rank=list=>{const i=list.sort((x,y)=>y.average-x.average).findIndex(x=>x.code===user.studentCode);return i<0?null:i+1;};
+      const subjects=[...new Set(grades.map(g=>g.subject))],subjectAverages=subjects.map(subject=>({subject,average:weighted(grades.filter(g=>g.subject===subject))}));
+      return json({student:{name:[sf["First Name"],sf["Last Name"]].filter(Boolean).join(" "),className:clean(sf["Class Name"])},grades,average,classRank:rank(averages.filter(x=>normClass(x.className)===normClass(sf["Class Name"]))),schoolRank:rank(averages),subjectAverages});
+    }
 
     if (path==="classes" && method==="GET") {
       const names=await getClassNames(env);
