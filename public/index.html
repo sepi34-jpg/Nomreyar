@@ -9,14 +9,14 @@
 .line-panel{margin:14px 0}.line-panel h3{margin:0 0 10px}.line-scroll{overflow-x:auto}.line-scroll svg{display:block;width:100%;min-width:440px;height:auto}</style></head><body>
 <header class="top"><div class="brand"><div class="logo">ن</div><div><h1>نمره‌یار</h1><p>مدیریت نمرات پایه هشتم · مدرسه هدف برتر</p></div></div><div id="userbar" class="hidden"><span id="username"></span> <button class="btn ghost" id="logout">خروج</button></div></header>
 <main class="wrap">
-<section id="loginbox" class="login"><h2>ورود به سامانه</h2><p class="muted">ورود مدیر و معلمان مجاز</p><form id="loginform"><div class="field"><label>ایمیل</label><input id="email" type="email" required autocomplete="username"></div><div class="field"><label for="password">رمز عبور</label><div class="password-wrap"><input id="password" type="password" required autocomplete="current-password"><button class="password-toggle" id="toggle-password" type="button" aria-label="نمایش رمز عبور" aria-pressed="false" title="نمایش رمز عبور">◉</button></div></div><div id="loginerror" class="error"></div><button class="btn full">ورود امن</button></form><p class="muted">حساب معلمان توسط مدیر تعریف می‌شود.</p></section>
+<section id="loginbox" class="login"><h2>ورود به نمره‌یار</h2><p class="muted">نوع حساب خود را انتخاب کنید.</p><div class="toolbar" style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:18px 0"><button type="button" class="btn" id="staff-choice">ورود مدیر / معلم</button><button type="button" class="btn ghost" id="student-choice">ورود دانش‌آموز</button></div><form id="loginform" class="hidden"><div class="field"><label>ایمیل</label><input id="email" type="email" required autocomplete="username"></div><div class="field"><label for="password">رمز عبور</label><div class="password-wrap"><input id="password" type="password" required autocomplete="current-password"><button class="password-toggle" id="toggle-password" type="button" aria-label="نمایش رمز عبور" aria-pressed="false" title="نمایش رمز عبور">◉</button></div></div><div id="loginerror" class="error"></div><button class="btn full">ورود امن</button><button type="button" class="btn ghost full" id="back-choice" style="margin-top:8px">بازگشت</button></form><form id="studentloginform" class="hidden"><div class="field"><label for="student-code">کد پنج‌رقمی دانش‌آموزی</label><input id="student-code" inputmode="numeric" autocomplete="off" maxlength="5" pattern="[0-9۰-۹٠-٩]{5}" placeholder="مثلاً ۱۲۳۴۵" required></div><div id="studentloginerror" class="error"></div><button class="btn full">ورود به پنل دانش‌آموز</button><button type="button" class="btn ghost full" id="back-student" style="margin-top:8px">بازگشت</button><p class="muted">کد ورود همان کد پنج‌رقمی اختصاص‌یافته هنگام ثبت دانش‌آموز است.</p></form></section>
 <section id="app" class="hidden"><div class="notice">نام دانش‌آموزان و نمره‌ها فقط توسط مدیر یا معلم مجاز ثبت می‌شوند. پیش از ثبت، کلاس و درس را بررسی کنید.</div>
 <div class="stats"><div class="stat"><small>دانش‌آموزان</small><strong id="s-students">—</strong></div><div class="stat"><small>نمره‌های ثبت‌شده</small><strong id="s-grades">—</strong></div><div class="stat"><small>کلاس‌های فعال</small><strong id="s-classes">۴</strong></div><div class="stat"><small>نقش حساب</small><strong id="s-role">—</strong></div></div>
 <div class="layout"><aside class="side"><nav class="nav" id="nav"><button data-tab="overview" class="active">نمای کلی</button><button data-tab="students">دانش‌آموزان</button><button data-tab="grades">ثبت و مشاهده نمرات</button><button data-tab="exams">آزمون‌ها</button><button data-tab="analytics">میانگین‌گیر و نمودار</button><button data-tab="report">کارنامه‌ساز</button><button data-tab="teachers" class="adminonly">مدیریت معلمان</button><button data-tab="classes">کلاس‌ها و درس‌ها</button></nav></aside><div><div class="headrow"><h2 id="page-title">نمای کلی</h2><div id="page-actions" class="toolbar"></div></div><div id="page"></div></div></div></section>
 </main><div id="modalroot"></div>
 <script>
 const $=s=>document.querySelector(s);
-const state={user:null,tab:"overview",classes:[],subjects:[],students:[],grades:[],exams:[],teachers:[]};
+const state={user:null,tab:"overview",classes:[],subjects:[],students:[],grades:[],exams:[],teachers:[],studentDashboard:null};
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const faDigits=s=>String(s??"").replace(/[۰-۹]/g,d=>"۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d));
 function jalaliParts(date){
@@ -73,6 +73,16 @@ function setBusy(button,busy,label="در حال انجام..."){
   if(busy){button.dataset.oldText=button.textContent;button.textContent=label;button.disabled=true;}
   else{button.textContent=button.dataset.oldText||button.textContent;button.disabled=false;}
 }
+async function startStudent(){
+ const d=await api("student/dashboard");state.studentDashboard=d;
+ $("#loginbox").classList.add("hidden");$("#app").classList.add("hidden");$("#userbar").classList.remove("hidden");$("#username").textContent=d.student.name+" · "+d.student.className;
+ $("#student-portal")?.remove();
+ const portal=document.createElement("section");portal.id="student-portal";portal.className="wrap";
+ portal.innerHTML='<div class="stats"><div class="stat"><small>معدل کل</small><strong>'+Number(d.average||0).toFixed(2)+'</strong></div><div class="stat"><small>رتبه کلاس</small><strong>'+(d.classRank||"—")+'</strong></div><div class="stat"><small>رتبه مدرسه</small><strong>'+(d.schoolRank||"—")+'</strong></div><div class="stat"><small>تعداد نمرات</small><strong>'+d.grades.length+'</strong></div></div><div class="panel"><h2>پنل دانش‌آموز</h2><p class="muted">سوابق و عملکرد تحصیلی شما</p><h3>میانگین هر درس</h3><div id="student-subjects"></div><h3>سوابق نمرات</h3><div id="student-grades"></div></div>';
+ $("#app").insertAdjacentElement("afterend",portal);
+ $("#student-subjects").innerHTML=d.subjectAverages.length?d.subjectAverages.map(x=>'<div class="barrow"><div><span>'+esc(x.subject)+'</span><strong>'+Number(x.average).toFixed(2)+'</strong></div><div class="bartrack"><div class="barfill" style="width:'+Math.max(0,Math.min(100,Number(x.average)*5))+'%"></div></div></div>').join(""):'<p class="empty">هنوز نمره‌ای ثبت نشده است.</p>';
+ $("#student-grades").innerHTML=table(["درس","نوع ارزیابی","آزمون","نمره","تاریخ"],d.grades.slice().sort((x,y)=>String(y.examDate).localeCompare(String(x.examDate))).map(x=>'<tr><td>'+esc(x.subject)+'</td><td>'+esc(x.assessmentType)+'</td><td>'+esc(x.examName)+'</td><td><strong>'+esc(x.score)+'</strong></td><td>'+esc(x.examDate?toJalali(x.examDate):"—")+'</td></tr>'));
+}
 async function load(){
   const [c,s,st,g,e]=await Promise.all([api("classes"),api("subjects"),api("students"),api("grades"),api("exams")]);
   state.classes=(c.items||[]).map(x=>x.name);
@@ -83,6 +93,7 @@ async function load(){
   $("#s-classes").textContent=state.classes.length;
 }
 async function start(){
+  if(state.user.role==="student"){await startStudent();return;}
   await load();
   $("#loginbox").classList.add("hidden");$("#app").classList.remove("hidden");$("#userbar").classList.remove("hidden");
   $("#username").textContent=state.user.name||state.user.email;
@@ -90,6 +101,10 @@ async function start(){
   document.querySelectorAll(".adminonly").forEach(x=>x.classList.toggle("hidden",state.user.role!=="admin"));
   render();
 }
+$("#staff-choice").onclick=()=>{$("#loginform").classList.remove("hidden");$("#studentloginform").classList.add("hidden");$("#staff-choice").classList.add("hidden");$("#student-choice").classList.add("hidden");};
+$("#student-choice").onclick=()=>{$("#studentloginform").classList.remove("hidden");$("#loginform").classList.add("hidden");$("#staff-choice").classList.add("hidden");$("#student-choice").classList.add("hidden");};
+$("#back-choice").onclick=$("#back-student").onclick=()=>{$("#loginform").classList.add("hidden");$("#studentloginform").classList.add("hidden");$("#staff-choice").classList.remove("hidden");$("#student-choice").classList.remove("hidden");$("#loginerror").textContent="";$("#studentloginerror").textContent="";};
+$("#studentloginform").onsubmit=async e=>{e.preventDefault();const b=e.submitter;setBusy(b,true,"در حال ورود...");$("#studentloginerror").textContent="";try{const code=faDigits($("#student-code").value).replace(/\D/g,"");const r=await api("student/login",{method:"POST",body:JSON.stringify({code})});state.user=r.user;await start();}catch(err){$("#studentloginerror").textContent=err.message;}finally{setBusy(b,false);}};
 $("#toggle-password").onclick=()=>{
   const p=$("#password"),b=$("#toggle-password"),show=p.type==="password";
   p.type=show?"text":"password";b.textContent=show?"◎":"◉";
@@ -361,6 +376,7 @@ function render(){
 // همیشه صفحه ورود نمایش داده شود؛ نشست قبلی خودکار وارد پنل نمی‌شود.
 state.user=null;
 $("#app").classList.add("hidden");
+$("#student-portal")?.remove();
 $("#userbar").classList.add("hidden");
 $("#loginbox").classList.remove("hidden");
 api("logout",{method:"POST"}).catch(()=>{});
