@@ -12,7 +12,7 @@
 <section id="loginbox" class="login"><h2>ورود به سامانه</h2><p class="muted">ورود مدیر و معلمان مجاز</p><form id="loginform"><div class="field"><label>ایمیل</label><input id="email" type="email" required autocomplete="username"></div><div class="field"><label for="password">رمز عبور</label><div class="password-wrap"><input id="password" type="password" required autocomplete="current-password"><button class="password-toggle" id="toggle-password" type="button" aria-label="نمایش رمز عبور" aria-pressed="false" title="نمایش رمز عبور">◉</button></div></div><div id="loginerror" class="error"></div><button class="btn full">ورود امن</button></form><p class="muted">حساب معلمان توسط مدیر تعریف می‌شود.</p></section>
 <section id="app" class="hidden"><div class="notice">نام دانش‌آموزان و نمره‌ها فقط توسط مدیر یا معلم مجاز ثبت می‌شوند. پیش از ثبت، کلاس و درس را بررسی کنید.</div>
 <div class="stats"><div class="stat"><small>دانش‌آموزان</small><strong id="s-students">—</strong></div><div class="stat"><small>نمره‌های ثبت‌شده</small><strong id="s-grades">—</strong></div><div class="stat"><small>کلاس‌های فعال</small><strong id="s-classes">۴</strong></div><div class="stat"><small>نقش حساب</small><strong id="s-role">—</strong></div></div>
-<div class="layout"><aside class="side"><nav class="nav" id="nav"><button data-tab="overview" class="active">نمای کلی</button><button data-tab="students">دانش‌آموزان</button><button data-tab="grades">ثبت و مشاهده نمرات</button><button data-tab="exams">آزمون‌ها</button><button data-tab="analytics">میانگین‌گیر و نمودار</button><button data-tab="teachers" class="adminonly">مدیریت معلمان</button><button data-tab="classes">کلاس‌ها و درس‌ها</button></nav></aside><div><div class="headrow"><h2 id="page-title">نمای کلی</h2><div id="page-actions" class="toolbar"></div></div><div id="page"></div></div></div></section>
+<div class="layout"><aside class="side"><nav class="nav" id="nav"><button data-tab="overview" class="active">نمای کلی</button><button data-tab="students">دانش‌آموزان</button><button data-tab="grades">ثبت و مشاهده نمرات</button><button data-tab="exams">آزمون‌ها</button><button data-tab="analytics">میانگین‌گیر و نمودار</button><button data-tab="report">کارنامه‌ساز</button><button data-tab="teachers" class="adminonly">مدیریت معلمان</button><button data-tab="classes">کلاس‌ها و درس‌ها</button></nav></aside><div><div class="headrow"><h2 id="page-title">نمای کلی</h2><div id="page-actions" class="toolbar"></div></div><div id="page"></div></div></div></section>
 </main><div id="modalroot"></div>
 <script>
 const $=s=>document.querySelector(s);
@@ -303,8 +303,47 @@ function renderTeachers(){
     await api("teachers",{method:"POST",body:JSON.stringify({name:form.elements.name.value,email:form.elements.email.value,password:form.elements.password.value,classes,subjects})});
   });
 }
+function renderReportCard(){
+ $("#page-actions").innerHTML='<button class="btn" id="download-report">دریافت تصویر کارنامه</button>';
+ const list=state.subjects.filter(s=>s.category!=="زیرشاخه علوم");
+ $("#page").innerHTML='<div class="panel"><div class="filters"><select id="report-student"><option value="">انتخاب دانش‌آموز</option>'+state.students.map(s=>'<option value="'+esc(s.code)+'">'+esc(s.name+' · '+s.className)+'</option>').join("")+'</select></div><p class="muted">کارنامه با نمرات ثبت‌شده ساخته می‌شود. تصویر فقط روی دستگاه شما تولید و دانلود می‌شود و روی هاست ذخیره نمی‌شود.</p><div style="overflow:auto;text-align:center"><canvas id="report-canvas" width="1024" height="1448" style="width:min(100%,720px);height:auto;border-radius:12px;border:1px solid #d8deea;background:#fff"></canvas></div></div>';
+ const canvas=$("#report-canvas"),ctx=canvas.getContext("2d");
+ const draw=()=>{
+  const code=$("#report-student").value,s=state.students.find(x=>x.code===code);
+  ctx.clearRect(0,0,1024,1448);
+  const bg=ctx.createLinearGradient(0,0,1024,1448);bg.addColorStop(0,"#f9fbff");bg.addColorStop(1,"#e9f0ff");ctx.fillStyle=bg;ctx.fillRect(0,0,1024,1448);
+  ctx.strokeStyle="#c18a24";ctx.lineWidth=12;ctx.strokeRect(20,20,984,1408);ctx.strokeStyle="#10254b";ctx.lineWidth=4;ctx.strokeRect(34,34,956,1380);
+  ctx.textAlign="center";ctx.fillStyle="#10254b";ctx.font="bold 34px Vazirmatn,Tahoma";ctx.fillText("کارنامه تحصیلی",512,105);
+  ctx.font="bold 22px Vazirmatn,Tahoma";ctx.fillText("مدرسه هدف برتر · دوره متوسطه",512,148);
+  ctx.font="18px Vazirmatn,Tahoma";ctx.fillText("سال تحصیلی ۱۴۰۵–۱۴۰۶",512,184);
+  ctx.textAlign="right";ctx.font="bold 21px Vazirmatn,Tahoma";ctx.fillText("نام دانش‌آموز: "+(s?s.name:"—"),950,248);ctx.fillText("کلاس: "+(s?s.className:"—"),480,248);
+  ctx.font="16px Vazirmatn,Tahoma";ctx.fillStyle="#46536b";ctx.fillText("کد دانش‌آموزی: "+(s?s.code:"—"),950,285);
+  const top=330,headerH=58,rowH=Math.min(49,760/Math.max(list.length,1)),cols=[940,690,490,290,70],widths=[0,250,200,200,220];
+  ctx.fillStyle="#10254b";ctx.fillRect(48,top,928,headerH);ctx.fillStyle="#fff";ctx.font="bold 18px Vazirmatn,Tahoma";ctx.textAlign="center";
+  ["ردیف","نام درس","نمره مستمر","نمره پایانی","معدل درس"].forEach((t,i)=>ctx.fillText(t,(cols[i]+(i===0?0:cols[i-1]))/2,top+37));
+  const grades=s?state.grades.filter(g=>g.studentCode===s.code):[];
+  const avgFor=arr=>{let sum=0,w=0;arr.forEach(g=>{const v=Number(g.score),k=Number(g.coefficient)||1;if(Number.isFinite(v)){sum+=v*k;w+=k;}});return w?sum/w:null;};
+  list.forEach((sub,i)=>{
+   const y=top+headerH+i*rowH;ctx.fillStyle=i%2?"#edf2fb":"#fff";ctx.fillRect(48,y,928,rowH);ctx.strokeStyle="#aab8cf";ctx.lineWidth=1;ctx.strokeRect(48,y,928,rowH);
+   const gs=grades.filter(g=>g.subject===sub.name),cont=gs.filter(g=>/مستمر|فعالیت کلاسی/i.test(g.assessmentType||"")),finals=gs.filter(g=>/پایانی|کتبی|امتحان/i.test(g.assessmentType||""));
+   const vals=[String(i+1),sub.name,avgFor(cont),avgFor(finals),avgFor(gs)];
+   ctx.fillStyle="#172b50";ctx.font="bold 17px Vazirmatn,Tahoma";ctx.textAlign="center";
+   const centers=[940,800,590,390,160];vals.forEach((v,j)=>ctx.fillText(j<2?v:(v===null?"—":v.toFixed(2)),centers[j],y+rowH/2+7));
+  });
+  const tableEnd=top+headerH+list.length*rowH+22,overall=avgFor(grades),same=state.students.map(st=>({code:st.code,avg:avgFor(state.grades.filter(g=>g.studentCode===st.code))})).filter(x=>x.avg!==null).sort((a,b)=>b.avg-a.avg),rank=s?same.findIndex(x=>x.code===s.code)+1:0;
+  const boxY=Math.min(tableEnd,1120);
+  ctx.fillStyle="#10254b";ctx.font="bold 20px Vazirmatn,Tahoma";ctx.textAlign="center";
+  const summary=[["معدل کل",overall===null?"—":overall.toFixed(2)+" از ۲۰"],["رتبه در کلاس",rank?rank+" از "+same.length:"—"],["وضعیت قبولی",overall===null?"بدون نمره":overall>=10?"قبول":"نیازمند بررسی"]];
+  summary.forEach((x,i)=>{const x0=60+i*305;ctx.fillStyle="#fff";ctx.strokeStyle="#c18a24";ctx.lineWidth=4;ctx.fillRect(x0,boxY,285,105);ctx.strokeRect(x0,boxY,285,105);ctx.fillStyle="#10254b";ctx.fillText(x[0],x0+142,boxY+35);ctx.font="bold 23px Vazirmatn,Tahoma";ctx.fillText(x[1],x0+142,boxY+75);ctx.font="bold 20px Vazirmatn,Tahoma";});
+  ctx.fillStyle="#10254b";ctx.textAlign="right";ctx.font="bold 20px Vazirmatn,Tahoma";ctx.fillText("توضیحات:",950,Math.min(boxY+165,1320));ctx.strokeStyle="#9eacc1";ctx.beginPath();ctx.moveTo(70,Math.min(boxY+205,1360));ctx.lineTo(950,Math.min(boxY+205,1360));ctx.stroke();
+  ctx.font="bold 19px Vazirmatn,Tahoma";ctx.textAlign="center";ctx.fillText("امضای مدیر مدرسه",760,Math.min(boxY+270,1400));ctx.fillText("امضای معلم",260,Math.min(boxY+270,1400));
+  if(!s){ctx.fillStyle="#66758d";ctx.font="24px Vazirmatn,Tahoma";ctx.fillText("برای مشاهده کارنامه، یک دانش‌آموز انتخاب کنید",512,800);}
+ };
+ $("#report-student").onchange=draw;draw();
+ $("#download-report").onclick=()=>{if(!$("#report-student").value){notify("ابتدا دانش‌آموز را انتخاب کنید.","error");return;}const a=document.createElement("a");a.download="کارنامه-"+($("#report-student").selectedOptions[0]?.textContent||"دانش‌آموز")+".png";a.href=canvas.toDataURL("image/png");a.click();};
+}
 function render(){
-  const titles={overview:"نمای کلی",students:"مدیریت دانش‌آموزان",grades:"ثبت و مدیریت نمرات",exams:"آزمون‌ها",analytics:"میانگین‌گیر و نمودار",teachers:"مدیریت معلمان",classes:"کلاس‌ها و درس‌ها"};
+  const titles={overview:"نمای کلی",students:"مدیریت دانش‌آموزان",grades:"ثبت و مدیریت نمرات",exams:"آزمون‌ها",analytics:"میانگین‌گیر و نمودار",report:"کارنامه‌ساز",teachers:"مدیریت معلمان",classes:"کلاس‌ها و درس‌ها"};
   $("#page-title").textContent=titles[state.tab]||"نمره‌یار";$("#page-actions").innerHTML="";
   if(state.tab==="overview"){
     $("#page").innerHTML='<div class="panel"><h3>به نمره‌یار خوش آمدید</h3><p class="muted">کلاس و درس را انتخاب کنید، دانش‌آموزان را مدیریت کنید و نمره‌ها را ثبت کنید.</p>'+state.classes.map(x=>'<span class="pill">'+esc(x)+'</span> ').join("")+'<p class="muted">اطلاعات از Airtable دریافت می‌شود و پس از ثبت، دائمی خواهد بود.</p></div>';return;
@@ -312,6 +351,7 @@ function render(){
   if(state.tab==="students")return renderStudents();
   if(state.tab==="grades")return renderGrades();
   if(state.tab==="analytics")return renderAnalytics();
+   if(state.tab==="report")return renderReportCard();
   if(state.tab==="exams")return renderExams();
   if(state.tab==="teachers")return renderTeachers();
   if(state.tab==="classes"){
