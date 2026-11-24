@@ -106,8 +106,11 @@ async function updateMany(env, table, records) {
 }
 export async function onRequest({request,env}) {
   try {
-    if (!signingKey(env)) return bad("برای ورود امن، ADMIN_PASSWORD را در Cloudflare به‌صورت Secret تنظیم کنید.",503);
     const url = new URL(request.url);
+    if (url.pathname === "/api/health" && request.method.toUpperCase() === "GET") {
+      return json({ok:true,service:"nomreyar-api",runtime:"render"});
+    }
+    if (!signingKey(env)) return bad("برای ورود امن، ADMIN_PASSWORD را در Environment Variables سرویس Render تنظیم کنید.",503);
     const path = url.pathname.replace(/^\/api\/?/,"").replace(/\/$/,"");
     const method = request.method.toUpperCase();
     if (["POST","PATCH","PUT","DELETE"].includes(method)) {
