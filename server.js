@@ -29,8 +29,11 @@ async function readBody(req) {
 
 const server = http.createServer(async (req, res) => {
   try {
-    const host = req.headers.host || "localhost";
-    const url = new URL(req.url || "/", `http://${host}`);
+    const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost";
+    const forwardedProto = req.headers["x-forwarded-proto"];
+    const protocol = (Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto || "http")
+      .split(",")[0].trim();
+    const url = new URL(req.url || "/", `${protocol}://${host}`);
 
     if (url.pathname === "/api" || url.pathname.startsWith("/api/")) {
       const method = (req.method || "GET").toUpperCase();
