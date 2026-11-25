@@ -233,7 +233,7 @@ export async function onRequest({request,env}) {
       const students=(await all(T.students,env)).filter(r=>fields(r).Active!==false);
       const averages=students.map(r=>{const code=clean(fields(r)["Student Code"]),gs=allGrades.filter(g=>clean(fields(g)["Student Code"])===code).map(g=>({score:Number(fields(g).Score),coefficient:Number(fields(g).Coefficient)||1}));return {code,className:clean(fields(r)["Class Name"]),average:weighted(gs)};}).filter(x=>x.code);
       const rank=list=>{const i=list.sort((x,y)=>y.average-x.average).findIndex(x=>x.code===user.studentCode);return i<0?null:i+1;};
-      const subjects=[...new Set(grades.map(g=>g.subject))],subjectAverages=subjects.map(subject=>({subject,average:weighted(grades.filter(g=>g.subject===subject))}));
+      const subjects=(await getSubjects(env)).map(s=>s.name),subjectAverages=subjects.map(subject=>{const list=grades.filter(g=>g.subject===subject);return {subject,average:list.length?weighted(list):null};});
       return json({student:{name:[sf["First Name"],sf["Last Name"]].filter(Boolean).join(" "),className:clean(sf["Class Name"])},grades,average,classRank:rank(averages.filter(x=>normClass(x.className)===normClass(sf["Class Name"]))),schoolRank:rank(averages),subjectAverages});
     }
 
