@@ -41,7 +41,7 @@
 </main><div id="modalroot"></div>
 <script>
 const $=s=>document.querySelector(s);
-const state={user:null,tab:"overview",classes:[],subjects:[],students:[],grades:[],exams:[],teachers:[],studentDashboard:null};
+const state={user:null,tab:"overview",classes:[],subjects:[],students:[],grades:[],exams:[],onlineExams:[],teachers:[],studentDashboard:null};
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const faDigits=s=>String(s??"").replace(/[۰-۹]/g,d=>"۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d));
 function jalaliParts(date){
@@ -100,16 +100,43 @@ function setBusy(button,busy,label="در حال انجام..."){
 }
 async function startStudent(){
  const d=await api("student/dashboard");state.studentDashboard=d;
+ const [goalsData,examData]=await Promise.all([api("student/goals"),api("online-exams")]);
+ const goals=goalsData.goals||{subjectTargets:{},averageTarget:null},online=examData.items||[],attempts=examData.attempts||[];
  $("#loginbox").classList.add("hidden");$("#app").classList.add("hidden");$("#userbar").classList.remove("hidden");$("#username").textContent=d.student.name+" · "+d.student.className;
  $("#student-portal")?.remove();
  const portal=document.createElement("section");portal.id="student-portal";portal.className="wrap";
- portal.innerHTML='<div class="stats"><div class="stat"><small>معدل کل</small><strong>'+Number(d.average||0).toFixed(2)+'</strong></div><div class="stat"><small>رتبه کلاس</small><strong>'+(d.classRank||"—")+'</strong></div><div class="stat"><small>رتبه مدرسه</small><strong>'+(d.schoolRank||"—")+'</strong></div><div class="stat"><small>تعداد نمرات</small><strong>'+d.grades.length+'</strong></div></div><div class="panel"><h2>پنل دانش‌آموز</h2><p class="muted">سوابق و عملکرد تحصیلی شما</p><h3>میانگین هر درس</h3><div id="student-subjects"></div><h3>سوابق نمرات</h3><div id="student-grades"></div></div>';
+ portal.innerHTML='<div class="stats"><div class="stat"><small>معدل کل</small><strong>'+Number(d.average||0).toFixed(2)+'</strong></div><div class="stat"><small>رتبه کلاس</small><strong>'+(d.classRank||"—")+'</strong></div><div class="stat"><small>رتبه مدرسه</small><strong>'+(d.schoolRank||"—")+'</strong></div><div class="stat"><small>تعداد نمرات</small><strong>'+d.grades.length+'</strong></div></div><div class="panel"><h2>پنل دانش‌آموز</h2><p class="muted">سوابق و عملکرد تحصیلی شما</p><div class="toolbar"><button class="btn ghost" data-studenttab="summary">کارنامه و نمرات</button><button class="btn ghost" data-studenttab="goals">اهداف من</button><button class="btn ghost" data-studenttab="online">امتحانات</button></div><div id="student-section" style="margin-top:16px"></div></div>';
  $("#app").insertAdjacentElement("afterend",portal);
- $("#student-subjects").innerHTML=d.subjectAverages.length?d.subjectAverages.map(x=>'<div class="barrow"><div><span>'+esc(x.subject)+'</span><strong>'+Number(x.average).toFixed(2)+'</strong></div><div class="bartrack"><div class="barfill" style="width:'+Math.max(0,Math.min(100,Number(x.average)*5))+'%"></div></div></div>').join(""):'<p class="empty">هنوز نمره‌ای ثبت نشده است.</p>';
- $("#student-grades").innerHTML=table(["درس","نوع ارزیابی","آزمون","نمره","تاریخ"],d.grades.slice().sort((x,y)=>String(y.examDate).localeCompare(String(x.examDate))).map(x=>'<tr><td>'+esc(x.subject)+'</td><td>'+esc(x.assessmentType)+'</td><td>'+esc(x.examName)+'</td><td><strong>'+esc(x.score)+'</strong></td><td>'+esc(x.examDate?toJalali(x.examDate):"—")+'</td></tr>'));
+ const section=$("#student-section");
+ function summary(){
+  section.innerHTML='<h3>میانگین هر درس</h3><div id="student-subjects"></div><h3>سوابق نمرات</h3><div id="student-grades"></div>';
+  $("#student-subjects").innerHTML=d.subjectAverages.length?d.subjectAverages.map(x=>'<div class="barrow"><div><span>'+esc(x.subject)+'</span><strong>'+Number(x.average).toFixed(2)+'</strong></div><div class="bartrack"><div class="barfill" style="width:'+Math.max(0,Math.min(100,Number(x.average)*5))+'%"></div></div></div>').join(""):'<p class="empty">هنوز نمره‌ای ثبت نشده است.</p>';
+  $("#student-grades").innerHTML=table(["درس","نوع ارزیابی","آزمون","نمره","تاریخ"],d.grades.slice().sort((x,y)=>String(y.examDate).localeCompare(String(x.examDate))).map(x=>'<tr><td>'+esc(x.subject)+'</td><td>'+esc(x.assessmentType)+'</td><td>'+esc(x.examName)+'</td><td><strong>'+esc(x.score)+'</strong></td><td>'+esc(x.examDate?toJalali(x.examDate):"—")+'</td></tr>'));
+ }
+ function goalsView(){
+  const subjectTargets=goals.subjectTargets||{};
+  section.innerHTML='<h3>هدف معدل کل</h3><div class="field"><label>معدل هدف (از ۲۰)</label><input id="goal-average" type="number" min="0" max="20" step="0.1" value="'+esc(goals.averageTarget??"")+'"></div><h3>هدف هر درس</h3>'+d.subjectAverages.map(x=>'<div class="field"><label>'+esc(x.subject)+' · میانگین فعلی '+Number(x.average).toFixed(2)+'</label><input class="goal-sub" data-subject="'+esc(x.subject)+'" type="number" min="0" max="20" step="0.1" value="'+esc(subjectTargets[x.subject]??"")+'"></div>').join("")+'<button class="btn" id="save-goals">ذخیره اهداف</button>';
+  $("#save-goals").onclick=async()=>{try{const targets={};document.querySelectorAll(".goal-sub").forEach(i=>{if(i.value!=="")targets[i.dataset.subject]=Number(i.value)});await api("student/goals",{method:"PUT",body:JSON.stringify({subjectTargets:targets,averageTarget:Number($("#goal-average").value)})});notify("اهداف شما ذخیره شد.");}catch(e){notify(e.message,"error")}};
+ }
+ function examView(){
+  const done=new Set(attempts.map(x=>x.examId));
+  const rows=online.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.subject)+'</td><td>'+esc(x.duration)+' دقیقه</td><td>'+ (done.has(x.id)?'<span class="pill">ثبت‌شده</span>':'<button class="btn small" data-take="'+esc(x.id)+'">شروع آزمون</button>')+'</td></tr>');
+  section.innerHTML='<h3>امتحانات منتشرشده برای کلاس شما</h3><p class="muted">هر آزمون پس از انتشار معلم در این فهرست ظاهر می‌شود.</p>'+table(["آزمون","درس","مدت","وضعیت"],rows,"هنوز آزمون منتشرشده‌ای برای کلاس شما نیست.")+'<div id="exam-take" style="margin-top:14px"></div>';
+  section.querySelectorAll("[data-take]").forEach(btn=>btn.onclick=()=>takeExam(online.find(x=>x.id===btn.dataset.take)));
+ }
+ function takeExam(ex){
+  const holder=$("#exam-take");if(!holder)return;
+  const qs=ex.questions||[];let remaining=ex.duration*60,interval;
+  holder.innerHTML='<div class="panel"><h3>'+esc(ex.name)+' · '+esc(ex.subject)+'</h3><p class="pill" id="exam-clock">زمان: '+Math.floor(remaining/60)+':'+String(remaining%60).padStart(2,"0")+'</p><form id="take-form">'+qs.map((q,i)=>'<div class="panel"><h4>'+ (i+1)+'. '+esc(q.text)+'</h4>'+q.options.map((o,j)=>'<label style="display:block;padding:8px"><input type="radio" name="'+esc(q.id)+'" value="'+j+'"> '+esc(o)+'</label>').join("")+'</div>').join("")+'<button class="btn" id="submit-online">ثبت پاسخ‌ها</button></form></div>';
+  const submit=async()=>{clearInterval(interval);const answers={};qs.forEach(q=>{const selected=holder.querySelector('input[name="'+q.id+'"]:checked');if(selected)answers[q.id]=Number(selected.value)});try{const result=await api("online-exams/"+encodeURIComponent(ex.id)+"/submit",{method:"POST",body:JSON.stringify({answers})});holder.innerHTML='<div class="panel"><h3>آزمون ثبت شد</h3><p>نمره شما: '+result.score+' از '+result.total+' ('+result.percent+'٪)</p></div>';notify("پاسخ‌ها ثبت شدند.");}catch(err){notify(err.message,"error")}};
+  $("#take-form").onsubmit=e=>{e.preventDefault();submit()};
+  interval=setInterval(()=>{remaining--;const clock=$("#exam-clock");if(!clock){clearInterval(interval);return;}clock.textContent="زمان: "+Math.floor(remaining/60)+":"+String(remaining%60).padStart(2,"0");if(remaining<=0)submit()},1000);
+ }
+ portal.querySelectorAll("[data-studenttab]").forEach(b=>b.onclick=()=>({summary,goals:goalsView,online:examView}[b.dataset.studenttab])());
+ summary();
 }
 async function load(){
-  const [c,s,st,g,e]=await Promise.all([api("classes"),api("subjects"),api("students"),api("grades"),api("exams")]);
+  const [c,s,st,g,e,oe]=await Promise.all([api("classes"),api("subjects"),api("students"),api("grades"),api("exams"),api("online-exams")]);state.onlineExams=oe.items||[];
   state.classes=(c.items||[]).map(x=>x.name);
   state.subjects=s.items||[];state.students=st.items||[];state.grades=g.items||[];state.exams=e.items||[];
   if(state.user.role==="admin"){const t=await api("teachers");state.teachers=t.items||[];}
@@ -329,11 +356,15 @@ function rankingTable(title,items){
  ["analytics-class","analytics-subject","analytics-student"].forEach(id=>$("#"+id).onchange=draw);draw();
 }
 function renderExams(){
-  $("#page-actions").innerHTML=state.user.role==="admin"?'<button class="btn" id="addexam">+ تعریف آزمون</button>':"";
-  $("#page").innerHTML=table(["نام آزمون","کلاس","درس","نوع","شاخه علوم","تاریخ","ضریب"],state.exams.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.className)+'</td><td>'+esc(x.subject)+'</td><td>'+esc(x.assessmentType)+'</td><td>'+esc(x.scienceBranch||"—")+'</td><td>'+esc(x.examDate)+'</td><td>'+esc(x.coefficient)+'</td></tr>'));
-  $("#addexam")?.addEventListener("click",()=>modal("تعریف آزمون",textField("نام آزمون","name","","text",'required maxlength="120"')+selectField("کلاس",state.classes,"className")+selectField("درس",state.subjects.map(s=>s.name),"subject")+selectField("نوع آزمون",["مستمر","آزمون کتبی","آزمون شفاهی","فعالیت کلاسی","پروژه","امتحان پایانی"],"assessmentType")+selectField("شاخه علوم",["زیست‌شناسی","فیزیک","شیمی","زمین‌شناسی"],"scienceBranch",false)+textField("تاریخ","examDate",new Date().toISOString().slice(0,10),"date") +textField("ضریب","coefficient","1","number",'required min="0.1" max="100" step="0.1"')+textField("توضیحات","description"),async form=>{
-    await api("exams",{method:"POST",body:JSON.stringify({name:form.elements.name.value,className:form.elements.className.value,subject:form.elements.subject.value,assessmentType:form.elements.assessmentType.value,scienceBranch:form.elements.scienceBranch.value,examDate:form.elements.examDate.value,coefficient:Number(form.elements.coefficient.value),description:form.elements.description.value})});
-  }));
+  $("#page-actions").innerHTML='<button class="btn" id="add-online-exam">+ تعریف آزمون آنلاین</button>';
+  const regular=table(["نام آزمون","کلاس","درس","نوع","شاخه علوم","تاریخ","ضریب"],state.exams.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.className)+'</td><td>'+esc(x.subject)+'</td><td>'+esc(x.assessmentType)+'</td><td>'+esc(x.scienceBranch||"—")+'</td><td>'+esc(x.examDate)+'</td><td>'+esc(x.coefficient)+'</td></tr>'));
+  const onlineRows=state.onlineExams.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.className)+'</td><td>'+esc(x.subject)+'</td><td>'+esc(x.duration)+' دقیقه</td><td>'+(x.published?'منتشر شده':'پیش‌نویس')+'</td><td>'+(x.published?'—':'<button class="btn small" data-publish="'+esc(x.id)+'">انتشار</button>')+'</td></tr>');
+  $("#page").innerHTML='<section class="panel"><h3>آزمون‌های آنلاین</h3><p class="muted">سوالات، چهار گزینه و پاسخ درست را خودتان وارد کنید. آزمون فقط پس از انتشار برای دانش‌آموزان کلاس قابل مشاهده می‌شود.</p>'+table(["نام","کلاس","درس","مدت","وضعیت","عملیات"],onlineRows,"هنوز آزمون آنلاین تعریف نشده است.")+'</section><section class="panel" style="margin-top:14px"><h3>آزمون‌های معمولی / ثبت نمره</h3>'+regular+'</section>';
+  $("#add-online-exam").onclick=()=>modal("تعریف آزمون آنلاین",textField("نام آزمون","name","","text",'required maxlength="120"')+selectField("کلاس",state.classes,"className")+selectField("درس",state.subjects.map(s=>s.name),"subject")+textField("مدت آزمون (دقیقه)","duration","20","number",'required min="1" max="240"')+'<div class="field"><label>سوال‌ها (JSON؛ correct از ۰ تا ۳)</label><textarea name="questions" rows="8" required placeholder='[{"text":"سوال؟","options":["گزینه ۱","گزینه ۲","گزینه ۳","گزینه ۴"],"correct":0}]'>[]</textarea><small class="muted">هر سوال باید متن، دقیقاً چهار گزینه و شماره گزینه درست (۰ تا ۳) داشته باشد.</small></div>',async form=>{
+    let questions;try{questions=JSON.parse(form.elements.questions.value)}catch{throw new Error("JSON سوال‌ها معتبر نیست.");}
+    await api("online-exams",{method:"POST",body:JSON.stringify({name:form.elements.name.value,className:form.elements.className.value,subject:form.elements.subject.value,duration:Number(form.elements.duration.value),questions})});
+  });
+  $("#page").querySelectorAll("[data-publish]").forEach(btn=>btn.onclick=async()=>{try{await api("online-exams/"+encodeURIComponent(btn.dataset.publish)+"/publish",{method:"PATCH"});await load();render();notify("آزمون منتشر شد و برای دانش‌آموزان کلاس نمایش داده می‌شود.");}catch(e){notify(e.message,"error")}});
 }
 function renderTeachers(){
   $("#page-actions").innerHTML='<button class="btn" id="addteacher">+ افزودن معلم</button>';
