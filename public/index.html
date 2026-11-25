@@ -6,7 +6,32 @@
 @media(max-width:760px){.stats{grid-template-columns:repeat(2,1fr)}.layout{grid-template-columns:1fr}.nav{display:flex;overflow:auto}.nav button{white-space:nowrap}.top{padding:16px}.headrow{align-items:flex-start;flex-direction:column}}
 
 .toast{position:fixed;bottom:20px;left:20px;z-index:20;background:#17345d;color:white;padding:12px 18px;border-radius:12px;box-shadow:0 8px 30px #10204033;opacity:0;transform:translateY(10px);pointer-events:none;transition:.2s;max-width:min(90vw,520px)}.toast.show{opacity:1;transform:translateY(0)}.toast[data-type="error"]{background:#9f2929}.btn:disabled{opacity:.6;cursor:wait}.btn.small{padding:6px 9px;font-size:12px}.btn.danger{background:#b83232;color:white}.filters input,.filters select{padding:10px;border:1px solid #dbe3f0;border-radius:10px;background:white;min-width:150px}.barrow{margin:16px 0}.barrow>div:first-child{display:flex;justify-content:space-between;gap:12px;font-size:13px;margin-bottom:6px}.bartrack{height:12px;border-radius:20px;background:#edf1f7;overflow:hidden}.barfill{height:100%;background:#496ff0;border-radius:20px}.modal .field input:focus,.modal .field select:focus,.filters input:focus,.filters select:focus{outline:2px solid #9bb1ff;border-color:#496ff0}.modal select[multiple]{min-height:110px}.modal .field input[type=number]{direction:ltr;text-align:right}@media(max-width:760px){.filters{display:grid;grid-template-columns:1fr}.filters input,.filters select{width:100%}.stats{gap:8px}.stat strong{font-size:19px}.modal{padding:17px}.tablewrap table{min-width:720px}.toast{left:10px;right:10px;bottom:10px;max-width:none}}
-.line-panel{margin:14px 0}.line-panel h3{margin:0 0 10px}.line-scroll{overflow-x:auto}.line-scroll svg{display:block;width:100%;min-width:440px;height:auto}</style></head><body>
+.line-panel{margin:14px 0}.line-panel h3{margin:0 0 10px}.line-scroll{overflow-x:auto}.line-scroll svg{display:block;width:100%;min-width:440px;height:auto}
+/* Mobile layout: keep the dashboard and navigation full-width and laptop-like */
+@media(max-width:760px){
+  html,body{width:100%;max-width:100%;overflow-x:hidden}
+  .wrap{width:100%;max-width:none;margin:16px auto;padding:0 12px}
+  #app,.layout,.layout>div,.side,.nav{width:100%;min-width:0;max-width:100%}
+  .layout{display:flex;flex-direction:column;gap:12px}
+  .side{padding:10px}
+  .nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;overflow:visible}
+  .nav button{white-space:normal;text-align:center;min-height:44px;padding:10px 7px;line-height:1.4}
+  .layout>div{min-width:0}
+  #page{width:100%;min-width:0}
+  .headrow{width:100%}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stat,.panel{min-width:0}
+  .top{width:100%;padding:12px}
+  .brand h1{font-size:17px}
+  .brand p{font-size:11px}
+}
+@media(max-width:420px){
+  .nav{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .nav button{font-size:12px}
+  .stats{gap:7px}
+  .stat{padding:12px}
+}
+</style></head><body>
 <header class="top"><div class="brand"><div class="logo">ن</div><div><h1>نمره‌یار</h1><p>مدیریت نمرات پایه هشتم · مدرسه هدف برتر</p></div></div><div id="userbar" class="hidden"><span id="username"></span> <button class="btn ghost" id="logout">خروج</button></div></header>
 <main class="wrap">
 <section id="loginbox" class="login"><h2>ورود به نمره‌یار</h2><p class="muted">نوع حساب خود را انتخاب کنید.</p><div class="toolbar" style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:18px 0"><button type="button" class="btn" id="staff-choice">ورود مدیر / معلم</button><button type="button" class="btn ghost" id="student-choice">ورود دانش‌آموز</button></div><form id="loginform" class="hidden"><div class="field"><label>ایمیل</label><input id="email" type="email" required autocomplete="username"></div><div class="field"><label for="password">رمز عبور</label><div class="password-wrap"><input id="password" type="password" required autocomplete="current-password"><button class="password-toggle" id="toggle-password" type="button" aria-label="نمایش رمز عبور" aria-pressed="false" title="نمایش رمز عبور">◉</button></div></div><div id="loginerror" class="error"></div><button class="btn full">ورود امن</button><button type="button" class="btn ghost full" id="back-choice" style="margin-top:8px">بازگشت</button></form><form id="studentloginform" class="hidden"><div class="field"><label for="student-code">کد پنج‌رقمی دانش‌آموزی</label><input id="student-code" inputmode="numeric" autocomplete="off" maxlength="5" pattern="[0-9۰-۹٠-٩]{5}" placeholder="مثلاً ۱۲۳۴۵" required></div><div id="studentloginerror" class="error"></div><button class="btn full">ورود به پنل دانش‌آموز</button><button type="button" class="btn ghost full" id="back-student" style="margin-top:8px">بازگشت</button><p class="muted">کد ورود همان کد پنج‌رقمی اختصاص‌یافته هنگام ثبت دانش‌آموز است.</p></form></section>
