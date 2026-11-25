@@ -179,7 +179,7 @@ export async function onRequest({request,env}) {
     if(path==="online-exams"&&method==="GET"){
       const examRows=await featureRows("ONLINE_EXAM_SAVE","OnlineExam"),attemptRows=await featureRows("ONLINE_ATTEMPT","OnlineExamAttempt");
       let items=examRows.map(r=>({...featureData(r),id:fields(r)["Entity ID"],recordId:r.id}));
-      if(user.role==="student")items=items.filter(x=>x.published&&x.className===user.className&&(!x.subject||true)).map(x=>({...x,questions:(x.questions||[]).map(q=>({id:q.id,text:q.text,options:q.options}))}));
+      if(user.role==="student")items=items.filter(x=>x.published&&x.className===user.className).map(x=>({...x,questions:(x.questions||[]).map(q=>({id:q.id,text:q.text,options:q.options}))}));
       else if(user.role==="teacher"){const allowed=[];for(const x of items)if(await teacherAccess(user,env,x.className,x.subject))allowed.push(x);items=allowed;}
       return json({items,attempts:user.role==="student"?attemptRows.filter(r=>fields(r)["Actor Email"]===user.studentCode).map(featureData):attemptRows.map(r=>featureData(r))});
     }
