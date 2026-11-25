@@ -160,6 +160,68 @@ export async function onRequest({request,env}) {
     const user=await current(request,env);
     if (!user) return bad("نشست ورود معتبر نیست؛ دوباره وارد شوید.",401);
     if (path==="me" && method==="GET") return json({user}); 
+    // Durable feature records are stored as structured JSON in ActivityLogs, avoiding schema changes.
+    const featureRows=async(action,type)=> (await all(T.logs,env)).filter(r=>fields(r).Action===action&&fields(r)["Entity Type"]===type);
+    const featureData=r=>{try{return JSON.parse(fields(r).After||"{}")}catch{return {}}};
+    if(path==="student/goals"&&user.role==="student"){
+      const rows=await featureRows("GOALS_SAVE","StudentGoals"),row=rows.find(r=>fields(r)["Entity ID"]===user.studentCode);
+      if(method==="GET")return json({goals:row?featureData(row):{subjectTargets:{},averageTarget:null}});
+      if(method==="PUT"){
+        let b;try{b=await request.json()}catch{return bad("اهداف معتبر نیست.");}
+        const targets=b.subjectTargets&&typeof b.subjectTargets==="object"?b.subjectTargets:{},averageTarget=Number(b.averageTarget);
+        if(!Number.isFinite(averageTarget)||averageTarget<0||averageTarget>20||Object.values(targets).some(v=>!Number.isFinite(Number(v))||Number(v)<0||Number(v)>20))return bad("هدف‌ها باید بین ۰ تا ۲۰ باشند.");
+        const data={subjectTargets:targets,averageTarget,updatedAt:new Date().toISOString()};
+        if(row)await airtable(env,T.logs,"PATCH",{records:[{id:row.id,fields:{After:JSON.stringify(data),Timestamp:new Date().toISOString()}}]});
+        else await airtable(env,T.logs,"POST",{records:[{fields:{Action:"GOALS_SAVE","Entity Type":"StudentGoals","Entity ID":user.studentCode,Before:"",After:JSON.stringify(data),"Actor Email":user.studentCode,Timestamp:new Date().toISOString(),Reason:"Student targets"}}]});
+        return json({ok:true,goals:data});
+      }
+    }
+    if(path==="online-exams"&&method==="GET"){
+      const examRows=await featureRows("ONLINE_EXAM_SAVE","OnlineExam"),attemptRows=await featureRows("ONLINE_ATTEMPT","OnlineExamAttempt");
+      let items=examRows.map(r=>({...featureData(r),id:fields(r)["Entity ID"],recordId:r.id}));
+      if(user.role==="student")items=items.filter(x=>x.published&&x.className===user.className&&(!x.subject||true)).map(x=>({...x,questions:(x.questions||[]).map(q=>({id:q.id,text:q.text,options:q.options}))}));
+      else if(user.role==="teacher")items=items.filter(x=>teacherAccess(user,env,x.className,x.subject));
+      return json({items,attempts:user.role==="student"?attemptRows.filter(r=>fields(r)["Actor Email"]===user.studentCode).map(featureData):attemptRows.map(r=>featureData(r))});
+    }
+    if(path==="online-exams"&&method==="POST"&&(user.role==="admin"||user.role==="teacher")){
+      let b;try{b=await request.json()}catch{return bad("اطلاعات آزمون معتبر نیست.");}
+      const name=clean(b.name),cl=clean(b.className),subject=clean(b.subject),duration=Number(b.duration),questions=Array.isArray(b.questions)?b.questions:[];
+      if(!name||name.length>120||!Number.isInteger(duration)||duration<1||duration>240||!questions.length||questions.length>100)return bad("نام، زمان ۱ تا ۲۴۰ دقیقه و حداقل یک سوال لازم است.");
+      if(!await teacherAccess(user,env,cl,subject))return bad("برای این کلاس یا درس مجوز ندارید.",403);
+      if(!(await getClassNames(env)).includes(cl)||!(await getSubjects(env)).some(s=>s.name===subject))return bad("کلاس یا درس معتبر نیست.");
+      const qs=questions.map((q,i)=>({id:"q"+(i+1),text:clean(q.text),options:(Array.isArray(q.options)?q.options:[]).map(clean),correct:Number(q.correct)}));
+      if(qs.some(q=>!q.text||q.options.length!==4||q.options.some(x=>!x)||!Number.isInteger(q.correct)||q.correct<0||q.correct>3))return bad("هر سوال باید متن، چهار گزینه و گزینه درست داشته باشد.");
+      const data={id:"OE"+crypto.randomUUID(),name,className:cl,subject,duration,published:false,createdBy:user.email,createdAt:new Date().toISOString(),questions:qs};
+      const result=await airtable(env,T.logs,"POST",{records:[{fields:{Action:"ONLINE_EXAM_SAVE","Entity Type":"OnlineExam","Entity ID":data.id,Before:"",After:JSON.stringify(data),"Actor Email":user.email,Timestamp:new Date().toISOString(),Reason:"Create online exam"}}]});
+      return json({ok:true,id:data.id,recordId:result.records?.[0]?.id},201);
+    }
+    const onlinePublish=path.match(/^online-exams\/([^/]+)\/publish$/);
+    if(onlinePublish&&method==="PATCH"&&(user.role==="admin"||user.role==="teacher")){
+      const rows=await featureRows("ONLINE_EXAM_SAVE","OnlineExam"),r=rows.find(x=>fields(x)["Entity ID"]===onlinePublish[1]);
+      if(!r)return bad("آزمون پیدا نشد.",404);const data=featureData(r);
+      if(user.role==="teacher"&&!await teacherAccess(user,env,data.className,data.subject))return bad("دسترسی ندارید.",403);
+      data.published=true;data.publishedAt=new Date().toISOString();
+      await airtable(env,T.logs,"PATCH",{records:[{id:r.id,fields:{After:JSON.stringify(data),Timestamp:data.publishedAt}}]});
+      return json({ok:true,published:true});
+    }
+    const onlineSubmit=path.match(/^online-exams\/([^/]+)\/submit$/);
+    if(onlineSubmit&&method==="POST"&&user.role==="student"){
+      const rows=await featureRows("ONLINE_EXAM_SAVE","OnlineExam"),r=rows.find(x=>fields(x)["Entity ID"]===onlineSubmit[1]);
+      if(!r)return bad("آزمون پیدا نشد.",404);const ex=featureData(r);
+      if(!ex.published||ex.className!==user.className)return bad("این آزمون برای شما منتشر نشده است.",403);
+      const prior=await featureRows("ONLINE_ATTEMPT","OnlineExamAttempt");
+      if(prior.some(x=>fields(x)["Entity ID"]===ex.id&&fields(x)["Actor Email"]===user.studentCode))return bad("شما قبلاً این آزمون را ثبت کرده‌اید.",409);
+      let b;try{b=await request.json()}catch{return bad("پاسخ‌ها معتبر نیستند.");}
+      const answers=b.answers&&typeof b.answers==="object"?b.answers:{},score=ex.questions.reduce((n,q)=>n+(Number(answers[q.id])===q.correct?1:0),0),total=ex.questions.length;
+      const attempt={examId:ex.id,studentCode:user.studentCode,studentName:user.name,className:user.className,subject:ex.subject,examName:ex.name,score,total,submittedAt:new Date().toISOString(),answers};
+      await airtable(env,T.logs,"POST",{records:[{fields:{Action:"ONLINE_ATTEMPT","Entity Type":"OnlineExamAttempt","Entity ID":ex.id,Before:"",After:JSON.stringify(attempt),"Actor Email":user.studentCode,Timestamp:attempt.submittedAt,Reason:"Student submit"}}]});
+      return json({ok:true,score,total,percent:Math.round(score/total*100)});
+    }
+    if(path==="online-exams/results"&&method==="GET"&&(user.role==="admin"||user.role==="teacher")){
+      const rows=await featureRows("ONLINE_ATTEMPT","OnlineExamAttempt"),items=[];
+      for(const r of rows){const x=featureData(r);if(user.role==="teacher"&&!await teacherAccess(user,env,x.className,x.subject))continue;items.push(x);}
+      return json({items});
+    }
     if(user.role==="student"){
       if(path!=="student/dashboard"||method!=="GET")return bad("این بخش فقط برای پنل دانش‌آموز مجاز است.",403);
       const student=await findStudentByCode(env,user.studentCode);
