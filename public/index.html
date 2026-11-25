@@ -361,10 +361,43 @@ function renderExams(){
   const onlineRows=state.onlineExams.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.className)+'</td><td>'+esc(x.subject)+'</td><td>'+esc(x.duration)+' دقیقه</td><td>'+(x.published?'منتشر شده':'پیش‌نویس')+'</td><td>'+(x.published?'—':'<button class="btn small" data-publish="'+esc(x.id)+'">انتشار</button>')+'</td></tr>');
   $("#page").innerHTML='<section class="panel"><h3>آزمون‌های آنلاین</h3><p class="muted">سوالات، چهار گزینه و پاسخ درست را خودتان وارد کنید. آزمون فقط پس از انتشار برای دانش‌آموزان کلاس قابل مشاهده می‌شود.</p>'+table(["نام","کلاس","درس","مدت","وضعیت","عملیات"],onlineRows,"هنوز آزمون آنلاین تعریف نشده است.")+'<button class="btn ghost" id="online-results" style="margin-top:12px">مشاهده نتایج دانش‌آموزان</button><div id="online-result-view" style="margin-top:12px"></div></section><section class="panel" style="margin-top:14px"><h3>آزمون‌های معمولی / ثبت نمره</h3>'+regular+'</section>';
   $("#online-results").onclick=async()=>{try{const r=await api("online-exams/results");$("#online-result-view").innerHTML=table(["نام آزمون","دانش‌آموز","کد","درس","نمره","زمان ثبت"],(r.items||[]).map(x=>'<tr><td>'+esc(x.examName)+'</td><td>'+esc(x.studentName)+'</td><td>'+esc(x.studentCode)+'</td><td>'+esc(x.subject)+'</td><td>'+esc(x.score)+' / '+esc(x.total)+'</td><td>'+esc(x.submittedAt?new Date(x.submittedAt).toLocaleString("fa-IR"):"—")+'</td></tr>'));}catch(e){notify(e.message,"error")}};
-  $("#add-online-exam").onclick=()=>modal("تعریف آزمون آنلاین",textField("نام آزمون","name","","text",'required maxlength="120"')+selectField("کلاس",state.classes,"className")+selectField("درس",state.subjects.map(s=>s.name),"subject")+textField("مدت آزمون (دقیقه)","duration","20","number",'required min="1" max="240"')+'<div class="field"><label>سوال‌ها (JSON؛ correct از ۰ تا ۳)</label><textarea name="questions" rows="8" required placeholder="ساختار سوال: متن، چهار گزینه و شماره گزینه درست (۰ تا ۳)">[]</textarea><small class="muted">هر سوال باید متن، دقیقاً چهار گزینه و شماره گزینه درست (۰ تا ۳) داشته باشد.</small></div>',async form=>{
-    let questions;try{questions=JSON.parse(form.elements.questions.value)}catch{throw new Error("JSON سوال‌ها معتبر نیست.");}
-    await api("online-exams",{method:"POST",body:JSON.stringify({name:form.elements.name.value,className:form.elements.className.value,subject:form.elements.subject.value,duration:Number(form.elements.duration.value),questions})});
-  });
+  $("#add-online-exam").onclick=()=>{
+    const base=textField("نام آزمون","name","","text",'required maxlength="120"')+selectField("کلاس",state.classes,"className")+selectField("درس",state.subjects.map(s=>s.name),"subject")+textField("مدت آزمون (دقیقه)","duration","20","number",'required min="1" max="240"')+
+    '<div class="field"><label for="question-count">تعداد سؤال‌های آزمون</label><input id="question-count" name="questionCount" type="number" min="1" max="100" step="1" value="1" required><small class="muted">با تعیین تعداد، دقیقاً به همان تعداد فرم سؤال ساخته می‌شود (حداکثر ۱۰۰ سؤال).</small></div><div id="question-editor"></div>';
+    modal("تعریف آزمون آنلاین",base,async form=>{
+      const count=Number(form.elements.questionCount.value);
+      if(!Number.isInteger(count)||count<1||count>100)throw new Error("تعداد سؤال باید بین ۱ تا ۱۰۰ باشد.");
+      const questions=[];
+      for(let i=0;i<count;i++){
+        const text=form.querySelector('[name="qtext-'+i+'"]').value.trim();
+        const options=[0,1,2,3].map(j=>form.querySelector('[name="qopt-'+i+'-'+j+'"]').value.trim());
+        const correct=Number(form.querySelector('[name="qcorrect-'+i+'"]').value);
+        if(!text||options.some(x=>!x))throw new Error("متن سؤال و هر چهار گزینه برای همه سؤال‌ها باید تکمیل شود.");
+        if(!Number.isInteger(correct)||correct<0||correct>3)throw new Error("گزینه پاسخ صحیح نامعتبر است.");
+        questions.push({text,options,correct});
+      }
+      await api("online-exams",{method:"POST",body:JSON.stringify({name:form.elements.name.value,className:form.elements.className.value,subject:form.elements.subject.value,duration:Number(form.elements.duration.value),questions})});
+    });
+    const form=$("#modalform"),editor=$("#question-editor"),countInput=$("#question-count");
+    const saved=[];
+    const readCurrent=()=>{
+      const n=Number(countInput.value)||0;
+      for(let i=0;i<n;i++){
+        const t=form.querySelector('[name="qtext-'+i+'"]');
+        if(t)saved[i]={text:t.value,options:[0,1,2,3].map(j=>form.querySelector('[name="qopt-'+i+'-'+j+'"]')?.value||""),correct:form.querySelector('[name="qcorrect-'+i+'"]')?.value||"0"};
+      }
+    };
+    const renderQuestionForms=()=>{
+      readCurrent();
+      const n=Math.max(0,Math.min(100,Number(countInput.value)||0));
+      editor.innerHTML=Array.from({length:n},(_,i)=>{
+        const q=saved[i]||{text:"",options:["","","",""],correct:"0"};
+        return '<section class="panel" style="margin:12px 0"><h3>سؤال '+(i+1)+'</h3><div class="field"><label>صورت سؤال '+(i+1)+'</label><textarea name="qtext-'+i+'" rows="3" required placeholder="متن صورت سؤال را وارد کنید">'+esc(q.text)+'</textarea></div>'+[0,1,2,3].map(j=>'<div class="field"><label>گزینه '+["۱","۲","۳","۴"][j]+'</label><input name="qopt-'+i+'-'+j+'" type="text" required value="'+esc(q.options[j])+'" placeholder="متن گزینه '+["۱","۲","۳","۴"][j]+'"></div>').join("")+'<div class="field"><label>شماره پاسخ صحیح</label><select name="qcorrect-'+i+'" required><option value="0" '+(q.correct==="0"?"selected":"")+'>۱</option><option value="1" '+(q.correct==="1"?"selected":"")+'>۲</option><option value="2" '+(q.correct==="2"?"selected":"")+'>۳</option><option value="3" '+(q.correct==="3"?"selected":"")+'>۴</option></select><small class="muted">فقط شماره گزینه صحیح را انتخاب کنید.</small></div></section>';
+      }).join("");
+    };
+    countInput.addEventListener("input",renderQuestionForms);
+    renderQuestionForms();
+  };
   $("#page").querySelectorAll("[data-publish]").forEach(btn=>btn.onclick=async()=>{try{await api("online-exams/"+encodeURIComponent(btn.dataset.publish)+"/publish",{method:"PATCH"});await load();render();notify("آزمون منتشر شد و برای دانش‌آموزان کلاس نمایش داده می‌شود.");}catch(e){notify(e.message,"error")}});
 }
 function renderTeachers(){
